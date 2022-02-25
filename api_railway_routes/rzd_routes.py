@@ -40,29 +40,8 @@ def __get_routes(trains: array, url: str) -> array:
     return routes
 
 
-def __get_suggested_city(station: str) -> str:
-    API_ENDPOINT = "https://ticket.rzd.ru//api/v1/suggests"
-    params = {
-        "GroupResults": True,
-        "RailwaySortPriority": True,
-        "Query": station,
-        "Language": "ru",
-        "TransportType": "rail"
-    }
-    data = requests.get(url=API_ENDPOINT, params=params)
-    return data.json()["city"][0]
-
-
-
-def get_routes_from_rzd(from_city: str, to_city: str, 
-    dep_date: datetime) -> array:
-
-    from_suggested_city = __get_suggested_city(from_city)
-    from_city_code = from_suggested_city["expressCode"]
-    from_city_nodeId = from_suggested_city["nodeId"]
-    to_suggested_city = __get_suggested_city(to_city)
-    to_city_code = to_suggested_city["expressCode"]
-    to_city_nodeId = to_suggested_city["nodeId"]
+def get_routes_from_rzd(from_station_code: str, from_station_nodeId: str, 
+    to_station_code: str, to_station_nodeId: str, dep_date: datetime) -> array:
 
     API_ENDPOINT = "https://ticket.rzd.ru/apib2b/p/Railway/V1/Search/TrainPricing"
     params = {
@@ -70,8 +49,8 @@ def get_routes_from_rzd(from_city: str, to_city: str,
     }
 
     body = {
-        "Origin": from_city_code,
-        "Destination": to_city_code,
+        "Origin": from_station_code,
+        "Destination": to_station_code,
         "DepartureDate": str(dep_date),
         "TimeFrom": 0,
         "TimeTo": 24,
@@ -82,15 +61,7 @@ def get_routes_from_rzd(from_city: str, to_city: str,
 
     response = requests.post(url=API_ENDPOINT, params=params, json=body)
     data = response.json()
-    url = __make_url(from_city_nodeId, to_city_nodeId, dep_date)
+    url = __make_url(from_station_nodeId, to_station_nodeId, dep_date)
     return __get_routes(data["Trains"], url)
-
-
-if __name__ == "__main__":
-    routes = get_routes_from_rzd("Москва", "Санкт-Петербург", datetime.now())
-    for route in routes:
-        print(route)
-        print("\n-------------------------------------")
-    
 
     
