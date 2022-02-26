@@ -1,7 +1,4 @@
-from itertools import count
-
-
-class TrainPlace:
+class Place():
     def __init__(self, name: str, count: int, 
         min_price: float, max_price: float) -> None:
 

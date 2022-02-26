@@ -1,9 +1,8 @@
-from itertools import count
 import requests
 from datetime import date, datetime
 from array import array
 from train_route import TrainRoute
-from train_place import TrainPlace
+from api_routes.place import Place
 
 
 def __make_url(from_city_nodeId: str, to_city_nodeId: str, dep_date: date) -> str: 
