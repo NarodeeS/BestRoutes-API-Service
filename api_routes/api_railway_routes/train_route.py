@@ -1,7 +1,7 @@
 from datetime import datetime
-from place import Place
+from train_place import TrainPlace
 
-class Route:
+class TrainRoute:
     def __init__(self, from_station: str,  
         to_station: str, train_number: int, 
         dep_datetime: datetime, arr_datetime: datetime, url: str) -> None:
@@ -15,8 +15,15 @@ class Route:
         self.places = []
 
     def add_place(self, name: str, count: int, whole: int, cents: int) -> None:
-        self.places.append(Place(name, count, whole, cents))
-    
+        self.places.append(TrainPlace(name, count, whole, cents))
+
+    def get_cheapiest_place(self) -> TrainPlace:
+        min_place = self.places[0]
+        for place in self.places:
+            if place.min_price < min_place.min_price:
+                min_place = place
+        
+        return min_place
     
     def __str__(self) -> str:
         return f"From: {self.from_s}\n" \
