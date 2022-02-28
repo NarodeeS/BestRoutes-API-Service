@@ -1,16 +1,14 @@
 from datetime import datetime
 from api_routes.place import Place
+from api_routes.base_route import BaseRoute
 
 
-class Route:
+class Route(BaseRoute):
     def __init__(self, departure: str, arrival: str,
                  departure_datetime: datetime, arrival_datetime: datetime,
                  url: str) -> None:
-        
-        self.departure = departure
-        self.arrival = arrival
-        self.departure_datetime = departure_datetime
-        self.arrival_datetime = arrival_datetime
+
+        super().__init__(departure, arrival, departure_datetime, arrival_datetime)
         self.url = url
         self.places = []
     
@@ -28,6 +26,6 @@ class Route:
     def get_places_info(self) -> str:
         result = ""
         for place in self.places:
-            result += place.__str__() + "\n"
+            result += "\t" + place.__str__() + "\n"
         
         return result
