@@ -141,7 +141,3 @@ def get_routes_from_pobeda_airlines(departure_code: str, arrival_code: str,
     else:
         raise ServiceNotRespondException(1, "Pobeda Airlines")
 
-
-routes = get_routes_from_pobeda_airlines("MOW", "LED", date.today(), 1, 0, 0, 0)
-for route in routes:
-    print(route)
