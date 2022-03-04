@@ -1,6 +1,6 @@
 from datetime import datetime
-from api_routes.place import Place
-from api_routes.base_route import BaseRoute
+from transport_utils.place import Place
+from transport_utils.base_route import BaseRoute
 
 
 class Route(BaseRoute):

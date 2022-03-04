@@ -2,7 +2,7 @@ import requests
 from datetime import date, datetime
 from array import array
 from train_route import TrainRoute
-from api_routes.place import Place
+from transport_utils.place import Place
 
 
 def __make_url(from_city_node_id: str, to_city_node_id: str, dep_date: date) -> str:
