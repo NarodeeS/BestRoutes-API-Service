@@ -1,8 +1,12 @@
 import requests
+import os
 from datetime import date, datetime
-from array import array
+from dotenv import load_dotenv
 from train_route import TrainRoute
-from transport_utils.place import Place
+from transport_utils import Place
+
+
+load_dotenv()
 
 
 def __make_url(from_city_node_id: str, to_city_node_id: str, dep_date: date) -> str:
@@ -12,7 +16,7 @@ def __make_url(from_city_node_id: str, to_city_node_id: str, dep_date: date) -> 
                           f"/{dep_date.strftime('%Y-%m-%d')}"
 
 
-def __get_places(places_json: array) -> array:
+def __get_places(places_json: list) -> list:
     places = []
     for place in places_json:
         if place["CarType"] != "Baggage":
@@ -25,7 +29,7 @@ def __get_places(places_json: array) -> array:
     return places
 
 
-def __get_routes(trains: array, url: str) -> array:
+def __get_routes(trains: list, url: str) -> list:
     _routes = []
     for train in trains:
         if train["HasElectronicRegistration"]:
@@ -45,7 +49,7 @@ def __get_routes(trains: array, url: str) -> array:
 # By default, sorted by departure time
 def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
                         to_station_code: str, to_station_node_id: str,
-                        dep_date: datetime) -> array:
+                        dep_date: datetime) -> list:
 
     api_endpoint = "https://ticket.rzd.ru/apib2b/p/Railway/V1/Search/TrainPricing"
     params = {
@@ -61,7 +65,7 @@ def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
         "GetByLocalTime": True,
         "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
     }
-    headers = {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:97.0) Gecko/20100101 Firefox/97.0"}
+    headers = {"User-Agent": os.environ.get("USER_AGENT")}
 
     response = requests.post(url=api_endpoint, params=params, json=body, headers=headers)
     data = response.json()
@@ -71,7 +75,7 @@ def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
 
 def get_routes_from_rzd_sorted_by_price(from_station_code: str, from_station_node_id: str,
                                         to_station_code: str, to_station_node_od: str,
-                                        dep_date: datetime) -> array:
+                                        dep_date: datetime) -> list:
 
     basic_routes = get_routes_from_rzd(from_station_code, from_station_node_id,
                                        to_station_code, to_station_node_od, dep_date)
@@ -82,7 +86,7 @@ def get_routes_from_rzd_sorted_by_price(from_station_code: str, from_station_nod
 # By default, without any sorting
 def get_routes_from_rzd_return(from_station_code: str, from_station_node_id: str,
                                to_station_code: str, to_station_node_id: str,
-                               dep_date1: datetime, dep_date2: datetime) -> array:
+                               dep_date1: datetime, dep_date2: datetime) -> list:
 
     routes_there = get_routes_from_rzd(from_station_code, from_station_node_id,
                                        to_station_code, to_station_node_id, dep_date1)

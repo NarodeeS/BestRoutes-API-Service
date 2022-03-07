@@ -1,11 +1,10 @@
 import json
 import requests
 from datetime import date, datetime
-from array import array
 from segment import Segment
-from transport_utils.exceptions.service_not_respond_exception import ServiceNotRespondException
+from transport_utils.exceptions import ServiceNotRespondException
 from avia_route import AviaRoute
-from transport_utils.place import Place
+from transport_utils import Place
 
 
 def __make_url(data: dict) -> str:
@@ -36,14 +35,14 @@ def __get_segment(_segment: dict, codes: dict) -> Segment:
                    segment_flight_time, airline, plane)
 
 
-def __get_min_price(index: int, tickets: array) -> int:
+def __get_min_price(index: int, tickets: list) -> int:
     for ticket in tickets:
         if ticket["trip_id"] == index:
             return ticket["min_price"]
     return -1
 
 
-def __get_routes(data: dict) -> array:
+def __get_routes(data: dict) -> list:
     _routes = []
     for _route in data["timetable"][0]:
         segments = []

@@ -1,5 +1,5 @@
 from datetime import datetime
-from transport_utils.base_route import BaseRoute
+from transport_utils import BaseRoute
 
 
 class Segment(BaseRoute):

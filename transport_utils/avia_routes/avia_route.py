@@ -1,12 +1,11 @@
-from array import array
 from datetime import datetime, time
-from transport_utils.route import Route
+from transport_utils import Route
 
 
 class AviaRoute(Route):
     def __init__(self, departure: str, departure_code: str, arrival: str,
                  arrival_code: str, departure_datetime: datetime,
-                 arrival_datetime: datetime, duration: time, segments: array,  url: str, source: str) -> None:
+                 arrival_datetime: datetime, duration: int, segments: list,  url: str, source: str) -> None:
 
         super().__init__(departure, arrival, departure_datetime, arrival_datetime, url)
         self.departure_code = departure_code
@@ -16,8 +15,10 @@ class AviaRoute(Route):
         self.source = source
 
     def __str__(self) -> str:
-        return f"Departure: {self.departure}({self.departure_code})\n" \
-               f"Arrival: {self.arrival}({self.arrival_code})\n" \
+        return f"Departure: {self.departure}" \
+               f"{'('+ self.departure_code + ')' if self.departure_code is not None else ''}\n" \
+               f"Arrival: {self.arrival}" \
+               f"{'(' + self.arrival_code + ')' if self.arrival_code is not None else ''}\n" \
                f"Departure date: {self.departure_datetime}\n" \
                f"Arrival date: {self.arrival_datetime}\n" \
                f"Duration: {self.duration}\n" \

@@ -1,5 +1,5 @@
 from datetime import datetime
-from transport_utils.route import Route
+from transport_utils import Route
 
 
 class TrainRoute(Route):
