@@ -1,13 +1,9 @@
 import json
 import requests
 from datetime import date, datetime
-from dotenv import load_dotenv
 from segment import Segment
 from transport_utils.exceptions import NoSuchAirportException
 from avia_route import AviaRoute
-
-
-load_dotenv()
 
 
 def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
