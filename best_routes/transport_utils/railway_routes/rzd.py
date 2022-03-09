@@ -3,7 +3,7 @@ import os
 from datetime import date, datetime
 from dotenv import load_dotenv
 from train_route import TrainRoute
-from transport_utils import Place
+from best_routes.transport_utils import Place
 
 
 load_dotenv()

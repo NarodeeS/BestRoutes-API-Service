@@ -2,9 +2,9 @@ import json
 import requests
 from datetime import date, datetime
 from segment import Segment
-from transport_utils.exceptions import NoSuchAirportException
+from best_routes.transport_utils.exceptions import NoSuchAirportException
 from avia_route import AviaRoute
-from transport_utils import Place
+from best_routes.transport_utils import Place
 
 
 def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
