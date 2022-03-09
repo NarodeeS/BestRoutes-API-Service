@@ -10,7 +10,6 @@ def get_routes():
 
 
 # check_login
-
 @app.route("/routes/avia/tutu", methods=["GET"])
 def get_routes_from_tutu():
     pass
@@ -38,7 +37,14 @@ def user_register():
     pass
 
 
-# check_login
-@app.route("/users/track-avia-price", methods=["POST"])
-def track_avia_price():
+@app.route("/users/quit", methods=["POST"])
+def user_quit():
     pass
+
+
+# check_login
+@app.route("/users/routes/avia-routes", methods=["GET", "POST"])
+def user_get_tracked_avia_routes():
+    pass
+
+

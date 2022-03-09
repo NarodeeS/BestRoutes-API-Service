@@ -32,16 +32,17 @@ def __get_places(places_json: list) -> list:
 def __get_routes(trains: list, url: str) -> list:
     _routes = []
     for train in trains:
-        if train["HasElectronicRegistration"]:
-            from_station = train["OriginStationInfo"]["StationName"].title()
-            to_station = train["DestinationStationInfo"]["StationName"].title()
-            train_number = train["TrainNumber"]
-            dep_datetime = datetime.fromisoformat(train["LocalDepartureDateTime"])
-            arr_datetime = datetime.fromisoformat(train["LocalArrivalDateTime"])
-            _route = TrainRoute(from_station, to_station, train_number, dep_datetime, arr_datetime, url)
-            _route.places = __get_places(train["CarGroups"])
-            if dep_datetime > datetime.now():
-                _routes.append(_route)
+        has_electronic_registration = train["HasElectronicRegistration"]
+        from_station = train["OriginStationInfo"]["StationName"].title()
+        to_station = train["DestinationStationInfo"]["StationName"].title()
+        train_number = train["TrainNumber"]
+        dep_datetime = datetime.fromisoformat(train["LocalDepartureDateTime"])
+        arr_datetime = datetime.fromisoformat(train["LocalArrivalDateTime"])
+        _route = TrainRoute(from_station, to_station, train_number, has_electronic_registration,
+                            dep_datetime, arr_datetime, url)
+        _route.places = __get_places(train["CarGroups"])
+        if dep_datetime > datetime.now():
+            _routes.append(_route)
 
     return _routes
 
@@ -61,13 +62,15 @@ def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
         "DepartureDate": str(dep_date),
         "TimeFrom": 0,
         "TimeTo": 24,
-        "CarGrouping": "Group",
+        "CarGrouping": "DontGroup",
+        "GetTrainsFromSchedule": True,
         "GetByLocalTime": True,
         "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
     }
     headers = {"User-Agent": os.environ.get("USER_AGENT")}
 
-    response = requests.post(url=api_endpoint, params=params, json=body, headers=headers)
+    response = requests.request(method="POST", url=api_endpoint,
+                                params=params, json=body, headers=headers)
     data = response.json()
     url = __make_url(from_station_node_id, to_station_node_id, dep_date)
     return __get_routes(data["Trains"], url)
