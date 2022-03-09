@@ -18,12 +18,14 @@ def __get_segment(_segment: dict, codes: dict) -> Segment:
     segment_flight_time = _segment["flight_time"]
     segment_departure_code = _segment["departure_airport"]
     segment_arrival_code = _segment["arrival_airport"]
-    segment_departure = codes["airport"][segment_departure_code]["airport"] + \
-        f" ({codes['airport'][segment_departure_code]['city']['city']}, " \
-        f"{codes['airport'][segment_departure_code]['country']})"
-    segment_arrival = codes["airport"][segment_arrival_code]["airport"] + \
-        f" ({codes['airport'][segment_arrival_code]['city']['city']}, " \
-        f"{codes['airport'][segment_arrival_code]['country']})"
+    segment_departure_airport = codes["airports"][segment_departure_code]
+    segment_departure = segment_departure_airport["airport"] + \
+        f" ({segment_departure_airport['city']['city']}, " \
+        f"{segment_departure_airport['country']})"
+    segment_arrival_airport = codes["airports"][segment_arrival_code]
+    segment_arrival = segment_arrival_airport["airport"] + \
+        f" ({segment_arrival_airport['city']['city']}, " \
+        f"{segment_arrival_airport['country']})"
     segment_departure_datetime = datetime.fromisoformat(_segment["departure_time"])
     segment_arrival_datetime = datetime.fromisoformat(_segment["arrival_time"])
     airline_code = _segment["airline"]
@@ -59,8 +61,8 @@ def __get_routes(data: dict) -> list:
             duration_in_minutes += segment.duration_in_minutes
         url = __make_url(data)
         index = _route["raw"]["index"]
-        min_price = __get_min_price(index, data["tickets"]) / data["currency_rate"]
-        places = [Place("Minimum", None, min_price, None)]
+        min_price = round(__get_min_price(index, data["tickets"]) / data["currency_rate"])
+        places = [Place("Минимальный", None, min_price, min_price)]
         avia_route = AviaRoute(departure, departure_code, arrival, arrival_code,
                                departure_datetime, arrival_datetime, duration_in_minutes,
                                segments, url, "https://www.kupibilet.ru/")

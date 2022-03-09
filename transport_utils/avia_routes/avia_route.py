@@ -23,13 +23,13 @@ class AviaRoute(Route):
                f"Arrival date: {self.arrival_datetime}\n" \
                f"Duration: {self.duration}\n" \
                f"Source: {self.source}\n" \
-               f"URL: {self.url}\nSegments " + self.get_segments_info() + "Places {\n" \
-               + self.get_places_info()+"\n}"
+               f"URL: {self.url}\nSegments " + self.get_segments_info() + "Places [\n" \
+               + self.get_places_info()+"\n]"
 
     def get_segments_info(self) -> str:
-        result = "{\n"
+        result = "[\n"
         for segment in self.segments:
             result += "\t" + str(segment) + "\n"
-        result += "\n}\n"
+        result += "\n]\n"
         return result
 
