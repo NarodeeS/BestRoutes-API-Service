@@ -140,16 +140,11 @@ def get_routes_from_tuturu(departure_code: str, arrival_code: str,
     headers = {
         'Content-Type': 'application/json'
     }
-    response = requests.post(url=api_endpoint, headers=headers, data=payload)
+    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
     data = response.json()
     data[0]["departure_id"] = departure_city_id
     data[0]["arrival_id"] = arrival_city_id
     return __get_routes(data)
-
-
-routes = get_routes_from_tuturu("MOW", "LED", date.today(), 2, 0, 0, "Y")
-for route in routes:
-    print(route)
 
 
 

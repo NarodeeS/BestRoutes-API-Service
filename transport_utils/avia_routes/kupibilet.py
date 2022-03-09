@@ -72,9 +72,10 @@ def __get_routes(data: dict) -> list:
     return _routes
 
 
+#  service_class = Y or C. Y - эконом. C - бизнес
 def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
                               departure_date: date, adult: int, child: int,
-                              infant: int):
+                              infant: int,  service_class: str):
 
     api_endpoint = "https://flights-api-shopping-target-site.kupibilet.ru/v4/search/new"
     payload = json.dumps({
@@ -91,7 +92,7 @@ def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
             }
         ],
         "options": {
-            "cabin_class": "Y",
+            "cabin_class": service_class,
             "features": [
                 "seat_selection"
             ],
@@ -111,6 +112,3 @@ def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
     return __get_routes(data)
 
 
-routes = get_routes_from_kupibilet("MOW", "LED", date.today(), 1, 0, 0)
-for route in routes:
-    print(route)
