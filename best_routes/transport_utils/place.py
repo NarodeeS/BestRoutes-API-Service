@@ -6,12 +6,14 @@ class Place:
         self.count = count
         self.min_price = min_price
         self.max_price = max_price
-    
-    def __str__(self) -> str:
-        return f"Type: {self.name}, " \
-            f"Count: {self.count}, " \
-            f"Min price: {self.min_price}, " \
-            f"Max price: {self.max_price}\n"
+
+    def to_json(self):
+        return {
+            "name": self.name,
+            "count": self.count,
+            "minPrice": self.min_price,
+            "maxPrice": self.max_price
+        }
 
     def __lt__(self, other) -> bool:
         if isinstance(other, Place):
@@ -19,3 +21,9 @@ class Place:
                 return True
             return False
         return False
+
+    def __str__(self) -> str:
+        return f"Type: {self.name}, " \
+            f"Count: {self.count}, " \
+            f"Min price: {self.min_price}, " \
+            f"Max price: {self.max_price}\n"

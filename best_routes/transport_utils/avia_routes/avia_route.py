@@ -23,8 +23,9 @@ class AviaRoute(Route):
                f"Arrival date: {self.arrival_datetime}\n" \
                f"Duration: {self.duration}\n" \
                f"Source: {self.source}\n" \
-               f"URL: {self.url}\nSegments " + self.get_segments_info() + "Places [\n" \
-               + self.get_places_info()+"\n]"
+               f"URL: {self.url}\n" \
+               f"Segments {self.get_segments_info()}\n" \
+               f"Places [\n{self.get_places_info()}\n]"
 
     def get_segments_info(self) -> str:
         result = "[\n"
@@ -41,8 +42,10 @@ class AviaRoute(Route):
             "arrivalCode": self.arrival_code,
             "departureDateTime": str(self.departure_datetime),
             "arrivalDateTime": str(self.arrival_datetime),
+            "segments": [segment.to_json() for segment in self.segments],
+            "places": [place.to_json() for place in self.places],
             "duration": self.duration,
             "source": self.source,
-            "url": self.url
+            "url": self.url,
         }
 

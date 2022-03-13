@@ -17,6 +17,19 @@ class Segment(BaseRoute):
         self.airline = airline
         self.plane = plane
 
+    def to_json(self):
+        return {
+            "departure": self.departure,
+            "departureCode": self.departure_code,
+            "arrival": self.arrival,
+            "arrivalCode": self.arrival_code,
+            "departureDateTime": self.departure_datetime,
+            "arrivalDateTime": self.arrival_datetime,
+            "duration": self.duration_in_minutes,
+            "airline": self.airline,
+            "plane": self.plane
+        }
+
     def __str__(self) -> str:
         return f"Departure: {self.departure}; " \
                f"Arrival: {self.arrival}; " \
