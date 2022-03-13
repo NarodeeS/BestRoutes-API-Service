@@ -33,3 +33,16 @@ class AviaRoute(Route):
         result += "\n]\n"
         return result
 
+    def to_json(self) -> dict:
+        return {
+            "departure": self.departure,
+            "departureCode": self.departure_code,
+            "arrival": self.arrival,
+            "arrivalCode": self.arrival_code,
+            "departureDateTime": str(self.departure_datetime),
+            "arrivalDateTime": str(self.arrival_datetime),
+            "duration": self.duration,
+            "source": self.source,
+            "url": self.url
+        }
+

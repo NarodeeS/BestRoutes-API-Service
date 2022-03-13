@@ -1,9 +1,9 @@
 import json
 import requests
 from datetime import date, datetime
-from segment import Segment
+from .segment import Segment
 from best_routes.transport_utils.exceptions import ServiceNotRespondException
-from avia_route import AviaRoute
+from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
 
 
