@@ -2,7 +2,7 @@ import json
 import requests
 from datetime import date, datetime
 from .segment import Segment
-from best_routes.transport_utils.exceptions import ServiceNotRespondException
+from best_routes.exceptions import ServiceNotRespondException, NoSuchRoutesException
 from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
 
@@ -109,6 +109,9 @@ def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
     data = response.json()
     if data["status"] == "fail":
         raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
-    return __get_routes(data)
+    routes = __get_routes(data)
+    if len(routes) == 0:
+        raise NoSuchRoutesException
+    return routes
 
 
