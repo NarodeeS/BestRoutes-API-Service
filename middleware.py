@@ -20,8 +20,8 @@ def auth(processing_function):
 def exception_handler(processing_function):
     def wrapper():
         try:
-            processing_function()
-        except (ValueError, KeyError):
+            return processing_function()
+        except (ValueError, KeyError, TypeError):
             message = jsonify(message="incorrect request format", status="error")
             return make_response(message, 400)
         except (ServiceNotRespondException, NoSuchRoutesException, NoSuchAirportException) as e:

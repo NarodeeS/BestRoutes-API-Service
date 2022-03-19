@@ -1,10 +1,15 @@
 import json
 import requests
+import os
 from datetime import date, datetime
+from dotenv import load_dotenv
 from .segment import Segment
 from best_routes.exceptions import NoSuchAirportException, NoSuchRoutesException
 from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
+
+
+load_dotenv()
 
 
 def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
@@ -78,7 +83,7 @@ def __get_segments(_route: dict, _segments: dict, points: dict,
     return segments
 
 
-def __get_routes(data: list) -> list:
+def __get_routes(data: list, count: int) -> list:
     dictionary = data[0]["dictionary"]
     points = dictionary["avia"]["points"]
     common = dictionary["common"]
@@ -107,6 +112,10 @@ def __get_routes(data: list) -> list:
         _route.places = [__get_min_place(segments_id, common["fareApplications"],
                                          dictionary["avia"]["conditions"], data[0]["offers"])]
         result_routes.append(_route)
+        if count != -1:
+            count -= 1
+            if count == 0:
+                break
 
     return result_routes
 
@@ -114,9 +123,9 @@ def __get_routes(data: list) -> list:
 #  service_class = Y or C. Y - эконом. C - бизнес
 def get_routes_from_tuturu(departure_code: str, arrival_code: str,
                            departure_date: date, adult: int, child: int,
-                           infant: int, service_class: str) -> list:
+                           infant: int, service_class: str, count: int) -> list:
 
-    api_endpoint = "https://offers-api.tutu.ru/avia/offers"
+    api_endpoint = os.environ.get("TUTU_API_ENDPOINT")
     departure_city_id = __get_city_id(departure_code, "from")
     arrival_city_id = __get_city_id(arrival_code, "to")
     payload = json.dumps({
@@ -145,11 +154,7 @@ def get_routes_from_tuturu(departure_code: str, arrival_code: str,
     data = response.json()
     data[0]["departure_id"] = departure_city_id
     data[0]["arrival_id"] = arrival_city_id
-    routes = __get_routes(data)
+    routes = __get_routes(data, count)
     if len(routes) == 0:
         raise NoSuchRoutesException
     return routes
-
-
-
-

@@ -1,6 +1,7 @@
 from flask import Flask, request, make_response, jsonify
-from best_routes import session, generate_token, User, Token
-from best_routes.transport_utils.avia_routes import get_routes_from, AviaService
+from best_routes import session, create_token, create_user, User, Token
+from best_routes.transport_utils.avia_routes import get_routes_from_service, get_routes, AviaService
+from best_routes.transport_utils.railway_routes import get_routes_from_rzd
 from werkzeug.security import generate_password_hash, check_password_hash
 from middleware import auth, exception_handler
 from dotenv import load_dotenv
@@ -11,37 +12,51 @@ load_dotenv()
 app = Flask(__name__)
 
 
-@app.route("/routes/avia", methods=["GET"])
+@app.route("/routes/avia", methods=["GET", "POST"])
 @auth
+@exception_handler
 def routes_avia():
+    return make_response(jsonify(result=get_routes(request.get_json()), status="OK"), 200)
+
+
+@app.route("/routes/avia/trip", methods=["GET", "POST"])
+@auth
+def routes_avia_trip():
     pass
 
 
-@app.route("/routes/avia/tutu", methods=["GET"])
+@app.route("/routes/avia/tutu", methods=["GET", "POST"])
 @auth
 @exception_handler
-def routes_tutu():
-    return make_response(jsonify(result=get_routes_from(AviaService.TUTU, request.get_json()),
+def routes_avia_tutu():
+    return make_response(jsonify(result=get_routes_from_service(AviaService.TUTU, request.get_json()),
                                  status="OK"), 200)
 
 
-@app.route("/routes/avia/kupibilet", methods=["GET"])
+@app.route("/routes/avia/kupibilet", methods=["GET", "POST"])
 @auth
 @exception_handler
-def routes_kupibilet():
-    return make_response(jsonify(result=get_routes_from(AviaService.KUPIBILET, request.get_json()),
+def routes_avia_kupibilet():
+    return make_response(jsonify(result=get_routes_from_service(AviaService.KUPIBILET, request.get_json()),
                                  status="OK"), 200)
 
 
-@app.route("/routes/railway/route", methods=["GET"])
+@app.route("/routes/railway/rzd", methods=["GET", "POST"])
 @auth
-def railway_routes():
-    pass
+def routes_railway_rzd():
+    content = request.get_json()
+    from_station_code = content["fromStationCode"]  # Express 3 format
+    from_station_node_id = content["fromStationNodeId"]  # from RZD suggests API
+    to_station_code = content["toStationCode"]
+    to_station_node_id = content["toStationNodeId"]
+    departure_datetime = content["departureDatetime"]
+    return get_routes_from_rzd(from_station_code, from_station_node_id,
+                               to_station_code, to_station_node_id, departure_datetime)
 
 
-@app.route("/routes/railway/trip", methods=["GET"])
+@app.route("/routes/railway/rzd/trip", methods=["GET", "POST"])
 @auth
-def railway_trips():
+def routes_railway_rzd_trip():
     pass
 
 
@@ -56,11 +71,7 @@ def user_login():
     supposed_user = session.query(User).filter(User.email == email).first()
     print(supposed_user.email)
     if check_password_hash(supposed_user.password, password):
-        user_token = Token(value=generate_token(email[0: email.index("@")]),
-                           user_id=supposed_user.id)
-        session.add(user_token)
-        session.commit()
-        session.rollback()
+        user_token = create_token(supposed_user.id)
         response = make_response(jsonify(status="OK"), 200)
         response.headers.add("Token", user_token.value)
         return response
@@ -81,30 +92,27 @@ def user_register():
         int(os.environ.get("SALT_ROUNDS"))
     )
     telegram_id = request.headers.get("telegramId")
-    new_user = User(email=email, password=hashed_password, telegram_id=telegram_id)
-    session.add(new_user)
-    session.commit()
-    session.rollback()
-    new_user_token = Token(value=generate_token(new_user.id),
-                           user_id=new_user.id)
-    session.add(new_user_token)
-    session.commit()
-    session.rollback()
+    new_user = create_user(email, hashed_password, telegram_id)
+    new_user_token = create_token(new_user.id)
     response = make_response(jsonify(status="OK"), 200)
-    response.headers.add("Token", new_user_token.value)
+    response.headers.add("Token", new_user_token)
     return response
 
 
 @app.route("/users/quit", methods=["POST"])
+@exception_handler
 def user_quit():
-    pass
-
-
-@app.route("/users/routes/avia-routes", methods=["GET", "POST"])
-@auth
-def user_tracked_avia_routes():
-    pass
+    user_token = request.headers.get("Token")
+    user_id = user_token.split(":")[0]
+    user_tokens = session.query(Token).filter(Token.user_id == user_id)
+    for token in user_tokens:
+        if token.value == user_token:
+            session.delete(token)
+            session.commit()
+            session.rollback()
+            return {"status": "OK"}
+    return {"status": "error", "message": "no user with such token"}
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host=os.environ.get("HOST"), port=os.environ.get("PORT"))
+    app.run(host=os.environ.get("HOST"), port=os.environ.get("PORT"))

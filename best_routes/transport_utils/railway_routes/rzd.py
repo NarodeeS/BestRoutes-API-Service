@@ -52,7 +52,7 @@ def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
                         to_station_code: str, to_station_node_id: str,
                         dep_date: datetime) -> list:
 
-    api_endpoint = "https://ticket.rzd.ru/apib2b/p/Railway/V1/Search/TrainPricing"
+    api_endpoint = os.environ.get("RZD_API_ENDPOINT")
     params = {
         "service_provider": "B2B_RZD"
     }
