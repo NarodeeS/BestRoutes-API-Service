@@ -12,6 +12,49 @@ from best_routes.transport_utils import Place
 load_dotenv()
 
 
+#  service_class = Y or C. Y - эконом. C - бизнес
+def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
+                                    departure_date: date, adult: int, child: int,
+                                    infant: int,  service_class: str, count: int) -> list:
+
+    api_endpoint = os.environ.get("KUPIBILET_API_ENDPOINT")
+    payload = json.dumps({
+        "passengers": {
+            "adult": adult,
+            "child": child,
+            "infant": infant
+        },
+        "parts": [
+            {
+                "departure": departure_code,
+                "arrival": arrival_code,
+                "date": str(departure_date)
+            }
+        ],
+        "options": {
+            "cabin_class": service_class,
+            "features": [
+                "seat_selection"
+            ],
+            "connection_search": True,
+            "client_name": "site_d",
+            "locale": "ru",
+            "country": "RU"
+        }
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
+    data = response.json()
+    if data["status"] == "fail":
+        raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
+    routes = __get_routes(data, count)
+    if len(routes) == 0:
+        raise NoSuchRoutesException
+    return sorted(routes, key=lambda _route: _route.get_cheapest_place())
+
+
 def __make_url(data: dict) -> str:
     site_endpoint = "https://www.kupibilet.ru/search/"
     part1 = data["search"]["cache_key"].split(":")[0]
@@ -66,59 +109,18 @@ def __get_routes(data: dict, count: int) -> list:
             duration_in_minutes += segment.duration_in_minutes
         url = __make_url(data)
         index = _route["raw"]["index"]
-        min_price = round(__get_min_price(index, data["tickets"]) / data["currency_rate"])
-        places = [Place("Минимальный", None, min_price, min_price)]
-        avia_route = AviaRoute(departure, departure_code, arrival, arrival_code,
-                               departure_datetime, arrival_datetime, duration_in_minutes,
-                               segments, url, "https://www.kupibilet.ru/")
-        avia_route.places = places
-        _routes.append(avia_route)
-        if count != -1:
-            count -= 1
-            if count == 0:
-                break
+        min_price = __get_min_price(index, data["tickets"])
+        if min_price != -1:
+            min_price = round(min_price / data["currency_rate"])
+            places = [Place("Минимальный", None, min_price, min_price)]
+            avia_route = AviaRoute(departure, departure_code, arrival, arrival_code,
+                                   departure_datetime, arrival_datetime, duration_in_minutes,
+                                   segments, url, "https://www.kupibilet.ru/")
+            avia_route.places = places
+            _routes.append(avia_route)
+            if count != -1:
+                count -= 1
+                if count == 0:
+                    break
 
     return _routes
-
-
-#  service_class = Y or C. Y - эконом. C - бизнес
-def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
-                              departure_date: date, adult: int, child: int,
-                              infant: int,  service_class: str, count: int):
-
-    api_endpoint = os.environ.get("KUPIBILET_API_ENDPOINT")
-    payload = json.dumps({
-        "passengers": {
-            "adult": adult,
-            "child": child,
-            "infant": infant
-        },
-        "parts": [
-            {
-                "departure": departure_code,
-                "arrival": arrival_code,
-                "date": str(departure_date)
-            }
-        ],
-        "options": {
-            "cabin_class": service_class,
-            "features": [
-                "seat_selection"
-            ],
-            "connection_search": True,
-            "client_name": "site_d",
-            "locale": "ru",
-            "country": "RU"
-        }
-    })
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
-    data = response.json()
-    if data["status"] == "fail":
-        raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
-    routes = __get_routes(data, count)
-    if len(routes) == 0:
-        raise NoSuchRoutesException
-    return routes

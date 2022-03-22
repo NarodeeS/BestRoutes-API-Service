@@ -12,6 +12,46 @@ from best_routes.transport_utils import Place
 load_dotenv()
 
 
+#  service_class = Y or C. Y - эконом. C - бизнес
+def get_routes_from_tuturu(departure_code: str, arrival_code: str,
+                           departure_date: date, adult: int, child: int,
+                           infant: int, service_class: str, count: int) -> list:
+
+    api_endpoint = os.environ.get("TUTU_API_ENDPOINT")
+    departure_city_id = __get_city_id(departure_code, "from")
+    arrival_city_id = __get_city_id(arrival_code, "to")
+    payload = json.dumps({
+        "passengers": {
+            "child": child,
+            "infant": infant,
+            "full": adult
+        },
+        "serviceClass": service_class,
+        "routes": [
+            {
+                "departureCityId": departure_city_id,
+                "arrivalCityId": arrival_city_id,
+                "departureDate": str(departure_date)
+            }
+        ],
+        "userData": {
+            "referenceToken": "anonymous_ref"
+        },
+        "source": "offers"
+    })
+    headers = {
+        'Content-Type': 'application/json'
+    }
+    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
+    data = response.json()
+    data[0]["departure_id"] = departure_city_id
+    data[0]["arrival_id"] = arrival_city_id
+    routes = __get_routes(data, count)
+    if len(routes) == 0:
+        raise NoSuchRoutesException
+    return sorted(routes, key=lambda _route: _route.get_cheapest_place())
+
+
 def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
     url_endpoint = "https://avia.tutu.ru/offers/?"
     formatted_date = "".join(reversed(str(departure_date).split("-")))
@@ -36,13 +76,13 @@ def __get_min_place(places_id: str, fare_applications: dict,
             name = conditions[condition_id]["fareFamily"]["value"]
         places.append(Place(name, None, price_exact, price_exact))
 
-    return min(places)
+    return places
 
 
 def __get_city_id(code: str, direction: str) -> int:
     api_endpoint = "https://avia.tutu.ru/suggest/city/v5/"
     params = {
-        "code": code,
+        "name": code,
         "direction": direction
     }
     response = requests.get(url=api_endpoint, params=params)
@@ -109,8 +149,8 @@ def __get_routes(data: list, count: int) -> list:
         source = "https://www.tutu.ru/"
         _route = AviaRoute(departure, None, arrival, None, departure_datetime,
                            arrival_datetime, duration_in_minutes, route_segments, url, source)
-        _route.places = [__get_min_place(segments_id, common["fareApplications"],
-                                         dictionary["avia"]["conditions"], data[0]["offers"])]
+        _route.places = __get_min_place(segments_id, common["fareApplications"],
+                                        dictionary["avia"]["conditions"], data[0]["offers"])
         result_routes.append(_route)
         if count != -1:
             count -= 1
@@ -118,43 +158,3 @@ def __get_routes(data: list, count: int) -> list:
                 break
 
     return result_routes
-
-
-#  service_class = Y or C. Y - эконом. C - бизнес
-def get_routes_from_tuturu(departure_code: str, arrival_code: str,
-                           departure_date: date, adult: int, child: int,
-                           infant: int, service_class: str, count: int) -> list:
-
-    api_endpoint = os.environ.get("TUTU_API_ENDPOINT")
-    departure_city_id = __get_city_id(departure_code, "from")
-    arrival_city_id = __get_city_id(arrival_code, "to")
-    payload = json.dumps({
-        "passengers": {
-            "child": child,
-            "infant": infant,
-            "full": adult
-        },
-        "serviceClass": service_class,
-        "routes": [
-            {
-                "departureCityId": departure_city_id,
-                "arrivalCityId": arrival_city_id,
-                "departureDate": str(departure_date)
-            }
-        ],
-        "userData": {
-            "referenceToken": "anonymous_ref"
-        },
-        "source": "offers"
-    })
-    headers = {
-        'Content-Type': 'application/json'
-    }
-    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
-    data = response.json()
-    data[0]["departure_id"] = departure_city_id
-    data[0]["arrival_id"] = arrival_city_id
-    routes = __get_routes(data, count)
-    if len(routes) == 0:
-        raise NoSuchRoutesException
-    return routes

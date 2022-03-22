@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-def get_all_services():
+def get_all_services() -> list:
     return [AviaService.TUTU,
             AviaService.KUPIBILET]
 

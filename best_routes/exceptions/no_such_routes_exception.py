@@ -5,4 +5,5 @@ class NoSuchRoutesException(Exception):
 
     def __str__(self):
         return f"We could not find routes for your request. " \
-               f"Message: {self.message}\nException code: {self.code}"
+               f"Message: {self.message}. " \
+               f"Exception code: {self.code}"

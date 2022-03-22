@@ -5,7 +5,7 @@ from best_routes.transport_utils import Route
 class AviaRoute(Route):
     def __init__(self, departure: str, departure_code: str, arrival: str,
                  arrival_code: str, departure_datetime: datetime,
-                 arrival_datetime: datetime, duration: int, segments: list,  url: str, source: str) -> None:
+                 arrival_datetime: datetime, duration: int, segments: list, url: str, source: str) -> None:
 
         super().__init__(departure, arrival, departure_datetime, arrival_datetime, url)
         self.departure_code = departure_code
@@ -16,7 +16,7 @@ class AviaRoute(Route):
 
     def __str__(self) -> str:
         return f"Departure: {self.departure}" \
-               f"{'('+ self.departure_code + ')' if self.departure_code is not None else ''}\n" \
+               f"{'(' + self.departure_code + ')' if self.departure_code is not None else ''}\n" \
                f"Arrival: {self.arrival}" \
                f"{'(' + self.arrival_code + ')' if self.arrival_code is not None else ''}\n" \
                f"Departure date: {self.departure_datetime}\n" \
@@ -26,6 +26,16 @@ class AviaRoute(Route):
                f"URL: {self.url}\n" \
                f"Segments {self.get_segments_info()}\n" \
                f"Places [\n{self.get_places_info()}\n]"
+
+    def __eq__(self, other):
+        if isinstance(other, AviaRoute):
+            if self.departure_datetime == other.departure_datetime:
+                for i in range(min(len(self.segments), len(other.segments))):
+                    if self.segments[i].departure_datetime != other.segments[i].departure_datetime and \
+                            self.segments[i].plane == other.segments[i].plane:
+                        return False
+                return True
+        return False
 
     def get_segments_info(self) -> str:
         result = "[\n"
@@ -48,4 +58,3 @@ class AviaRoute(Route):
             "source": self.source,
             "url": self.url,
         }
-

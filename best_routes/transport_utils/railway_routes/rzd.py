@@ -2,11 +2,68 @@ import requests
 import os
 from datetime import date, datetime
 from dotenv import load_dotenv
-from train_route import TrainRoute
+from .train_route import TrainRoute
 from best_routes.transport_utils import Place
 
 
 load_dotenv()
+
+
+def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
+                        to_station_code: str, to_station_node_id: str,
+                        dep_date: datetime) -> list:
+
+    api_endpoint = os.environ.get("RZD_API_ENDPOINT")
+    params = {
+        "service_provider": "B2B_RZD"
+    }
+    body = {
+        "Origin": from_station_code,
+        "Destination": to_station_code,
+        "DepartureDate": str(dep_date),
+        "TimeFrom": 0,
+        "TimeTo": 24,
+        "CarGrouping": "DontGroup",
+        "GetTrainsFromSchedule": True,
+        "GetByLocalTime": True,
+        "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
+    }
+    headers = {"User-Agent": os.environ.get("USER_AGENT")}
+
+    response = requests.request(method="POST", url=api_endpoint,
+                                params=params, json=body, headers=headers)
+    data = response.json()
+    url = __make_url(from_station_node_id, to_station_node_id, dep_date)
+    routes = __get_routes(data["Trains"], url)
+    sorted(routes, key=lambda _route: _route.get_cheapest_place())
+
+
+# By default, without any sorting
+def get_routes_from_rzd_return(from_station_code: str, from_station_node_id: str,
+                               to_station_code: str, to_station_node_id: str,
+                               dep_date1: datetime, dep_date2: datetime) -> list:
+
+    routes_there = get_routes_from_rzd(from_station_code, from_station_node_id,
+                                       to_station_code, to_station_node_id, dep_date1)
+
+    routes_back = get_routes_from_rzd(to_station_code, to_station_node_id,
+                                      from_station_code, from_station_node_id, dep_date2)
+
+    result = []
+    for there in routes_there:
+        for back in routes_back:
+            if len(there.places) != 0 and len(back.places) != 0:
+                trip_min_amount = there.get_cheapest_place().min_price + back.get_cheapest_place().min_price
+                trip = {
+                    "to": there,
+                    "back": back,
+                    "tripMinCost": round(trip_min_amount, 1)
+                }
+                result.append(trip)
+            else:
+                print(there)
+                print(back)
+    return sorted(result, key=lambda _trip: _trip["TripMinCost"])
 
 
 def __make_url(from_city_node_id: str, to_city_node_id: str, dep_date: date) -> str:
@@ -45,81 +102,3 @@ def __get_routes(trains: list, url: str) -> list:
             _routes.append(_route)
 
     return _routes
-
-
-# By default, sorted by departure time
-def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
-                        to_station_code: str, to_station_node_id: str,
-                        dep_date: datetime) -> list:
-
-    api_endpoint = os.environ.get("RZD_API_ENDPOINT")
-    params = {
-        "service_provider": "B2B_RZD"
-    }
-    body = {
-        "Origin": from_station_code,
-        "Destination": to_station_code,
-        "DepartureDate": str(dep_date),
-        "TimeFrom": 0,
-        "TimeTo": 24,
-        "CarGrouping": "DontGroup",
-        "GetTrainsFromSchedule": True,
-        "GetByLocalTime": True,
-        "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
-    }
-    headers = {"User-Agent": os.environ.get("USER_AGENT")}
-
-    response = requests.request(method="POST", url=api_endpoint,
-                                params=params, json=body, headers=headers)
-    data = response.json()
-    url = __make_url(from_station_node_id, to_station_node_id, dep_date)
-    return __get_routes(data["Trains"], url)
-
-
-def get_routes_from_rzd_sorted_by_price(from_station_code: str, from_station_node_id: str,
-                                        to_station_code: str, to_station_node_od: str,
-                                        dep_date: datetime) -> list:
-
-    basic_routes = get_routes_from_rzd(from_station_code, from_station_node_id,
-                                       to_station_code, to_station_node_od, dep_date)
-
-    return sorted(basic_routes, key=lambda _route: _route.get_cheapest_place())
-
-
-# By default, without any sorting
-def get_routes_from_rzd_return(from_station_code: str, from_station_node_id: str,
-                               to_station_code: str, to_station_node_id: str,
-                               dep_date1: datetime, dep_date2: datetime) -> list:
-
-    routes_there = get_routes_from_rzd(from_station_code, from_station_node_id,
-                                       to_station_code, to_station_node_id, dep_date1)
-
-    routes_back = get_routes_from_rzd(to_station_code, to_station_node_id,
-                                      from_station_code, from_station_node_id, dep_date2)
-
-    result = []
-    for there in routes_there:
-        for back in routes_back:
-            if len(there.places) != 0 and len(back.places) != 0:
-                trip_min_amount = there.get_cheapest_place().min_price + back.get_cheapest_place().min_price
-                trip = {
-                    "There": there,
-                    "Back": back,
-                    "TripMinCost": round(trip_min_amount, 1)
-                }
-                result.append(trip)
-            else:
-                print(there)
-                print(back)
-    return result
-
-
-def get_routes_from_rzd_return_sorted_by_price(from_station_code: str, from_station_node_id: str,
-                                               to_station_code: str, to_station_node_id: str,
-                                               dep_date1: datetime, dep_date2: datetime) -> dict:
-
-    basic_trips = get_routes_from_rzd_return(from_station_code, from_station_node_id,
-                                             to_station_code, to_station_node_id,
-                                             dep_date1, dep_date2)
-
-    return sorted(basic_trips, key=lambda trip: trip["TripMinCost"])

@@ -17,7 +17,7 @@ class Segment(BaseRoute):
         self.airline = airline
         self.plane = plane
 
-    def to_json(self):
+    def to_json(self) -> dict:
         return {
             "departure": self.departure,
             "departureCode": self.departure_code,

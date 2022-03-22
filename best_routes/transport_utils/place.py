@@ -7,7 +7,7 @@ class Place:
         self.min_price = min_price
         self.max_price = max_price
 
-    def to_json(self):
+    def to_json(self) -> dict:
         return {
             "name": self.name,
             "count": self.count,
@@ -21,6 +21,10 @@ class Place:
                 return True
             return False
         return False
+
+    def __add__(self, other):
+        if isinstance(other, Place):
+            return self.min_price + other.min_price
 
     def __str__(self) -> str:
         return f"Type: {self.name}, " \

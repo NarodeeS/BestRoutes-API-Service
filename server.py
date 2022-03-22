@@ -1,7 +1,8 @@
 from flask import Flask, request, make_response, jsonify
 from best_routes import session, create_token, create_user, User, Token
-from best_routes.transport_utils.avia_routes import get_routes_from_service, get_routes, AviaService
-from best_routes.transport_utils.railway_routes import get_routes_from_rzd
+from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
+    get_avia_trips_from_service, get_avia_trips, AviaService
+from best_routes.transport_utils.railway_routes import get_routes_from_rzd, get_routes_from_rzd_return
 from werkzeug.security import generate_password_hash, check_password_hash
 from middleware import auth, exception_handler
 from dotenv import load_dotenv
@@ -16,20 +17,29 @@ app = Flask(__name__)
 @auth
 @exception_handler
 def routes_avia():
-    return make_response(jsonify(result=get_routes(request.get_json()), status="OK"), 200)
+    return make_response(jsonify(result=get_avia_routes(request.get_json()), status="OK"), 200)
 
 
-@app.route("/routes/avia/trip", methods=["GET", "POST"])
+@app.route("/routes/avia/trips", methods=["GET", "POST"])
 @auth
+@exception_handler
 def routes_avia_trip():
-    pass
+    return make_response(jsonify(result=get_avia_trips(request.get_json()), status="OK"), 200)
 
 
 @app.route("/routes/avia/tutu", methods=["GET", "POST"])
 @auth
 @exception_handler
 def routes_avia_tutu():
-    return make_response(jsonify(result=get_routes_from_service(AviaService.TUTU, request.get_json()),
+    return make_response(jsonify(result=get_avia_routes_from_service(AviaService.TUTU, request.get_json()),
+                                 status="OK"), 200)
+
+
+@app.route("/routes/avia/tutu/trips", methods=["GET", "POST"])
+@auth
+@exception_handler
+def routes_avia_tutu_trip():
+    return make_response(jsonify(result=get_avia_trips_from_service(AviaService.TUTU, request.get_json()),
                                  status="OK"), 200)
 
 
@@ -37,12 +47,20 @@ def routes_avia_tutu():
 @auth
 @exception_handler
 def routes_avia_kupibilet():
-    return make_response(jsonify(result=get_routes_from_service(AviaService.KUPIBILET, request.get_json()),
+    return make_response(jsonify(result=get_avia_routes_from_service(AviaService.KUPIBILET, request.get_json()),
+                                 status="OK"), 200)
+
+
+@app.route("/routes/avia/kupibilet/trips", methods=["GET", "POST"])
+@auth
+def routes_avia_kupibilet_trip():
+    return make_response(jsonify(result=get_avia_trips_from_service(AviaService.KUPIBILET, request.get_json()),
                                  status="OK"), 200)
 
 
 @app.route("/routes/railway/rzd", methods=["GET", "POST"])
 @auth
+@exception_handler
 def routes_railway_rzd():
     content = request.get_json()
     from_station_code = content["fromStationCode"]  # Express 3 format
@@ -50,14 +68,25 @@ def routes_railway_rzd():
     to_station_code = content["toStationCode"]
     to_station_node_id = content["toStationNodeId"]
     departure_datetime = content["departureDatetime"]
-    return get_routes_from_rzd(from_station_code, from_station_node_id,
-                               to_station_code, to_station_node_id, departure_datetime)
+    result = get_routes_from_rzd(from_station_code, from_station_node_id,
+                                 to_station_code, to_station_node_id, departure_datetime)
+    return make_response(jsonify(result=result, status="OK"), 200)
 
 
-@app.route("/routes/railway/rzd/trip", methods=["GET", "POST"])
+@app.route("/routes/railway/rzd/trips", methods=["GET", "POST"])
 @auth
+@exception_handler
 def routes_railway_rzd_trip():
-    pass
+    content = request.get_json()
+    from_station_code = content["fromStationCode"]
+    from_station_node_id = content["fromStationNodeId"]
+    to_station_code = content["toStationCode"]
+    to_station_node_id = content["toStationNodeId"]
+    departure_datetime1 = content["departureDatetime1"]
+    departure_datetime2 = content["departureDateTime2"]
+    result = get_routes_from_rzd_return(from_station_code, from_station_node_id, to_station_code,
+                                        to_station_node_id, departure_datetime1, departure_datetime2)
+    return make_response(jsonify(result=result, status="OK"), 200)
 
 
 @app.route("/users/login", methods=["POST"])
