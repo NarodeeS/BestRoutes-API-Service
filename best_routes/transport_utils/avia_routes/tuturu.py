@@ -7,19 +7,20 @@ from .segment import Segment
 from best_routes.exceptions import NoSuchAirportException, NoSuchRoutesException
 from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
+from requests import Response
 
 
 load_dotenv()
 
 
 #  service_class = Y or C. Y - эконом. C - бизнес
-def get_routes_from_tuturu(departure_code: str, arrival_code: str,
-                           departure_date: date, adult: int, child: int,
-                           infant: int, service_class: str, count: int) -> list:
+def get_request_to_tuturu(departure_code: str, arrival_code: str,
+                          departure_date: date, adult: int, child: int,
+                          infant: int, service_class: str) -> dict:
 
     api_endpoint = os.environ.get("TUTU_API_ENDPOINT")
-    departure_city_id = __get_city_id(departure_code, "from")
-    arrival_city_id = __get_city_id(arrival_code, "to")
+    departure_city_id = get_city_id(departure_code, "from")
+    arrival_city_id = get_city_id(arrival_code, "to")
     payload = json.dumps({
         "passengers": {
             "child": child,
@@ -42,10 +43,18 @@ def get_routes_from_tuturu(departure_code: str, arrival_code: str,
     headers = {
         'Content-Type': 'application/json'
     }
-    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
+    request = {
+        "url": api_endpoint,
+        "data": payload,
+        "headers": headers
+    }
+    return request
+
+
+def get_routes_from_tuturu(response: Response, count: int, **additional_info: dict) -> list:
     data = response.json()
-    data[0]["departure_id"] = departure_city_id
-    data[0]["arrival_id"] = arrival_city_id
+    data[0]["departure_id"] = additional_info["departureId"]
+    data[0]["arrival_id"] = additional_info["arrivalId"]
     routes = __get_routes(data, count)
     if len(routes) == 0:
         raise NoSuchRoutesException
@@ -79,7 +88,7 @@ def __get_min_place(places_id: str, fare_applications: dict,
     return places
 
 
-def __get_city_id(code: str, direction: str) -> int:
+def get_city_id(code: str, direction: str) -> int:
     api_endpoint = "https://avia.tutu.ru/suggest/city/v5/"
     params = {
         "name": code,

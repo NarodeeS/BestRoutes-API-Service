@@ -1,7 +1,7 @@
 import json
-import requests
 import os
 from datetime import date, datetime
+from requests import Response
 from dotenv import load_dotenv
 from .segment import Segment
 from best_routes.exceptions import ServiceNotRespondException, NoSuchRoutesException
@@ -13,9 +13,9 @@ load_dotenv()
 
 
 #  service_class = Y or C. Y - эконом. C - бизнес
-def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
-                                    departure_date: date, adult: int, child: int,
-                                    infant: int,  service_class: str, count: int) -> list:
+def get_request_to_kupibilet(departure_code: str, arrival_code: str,
+                             departure_date: date, adult: int, child: int,
+                             infant: int,  service_class: str) -> dict:
 
     api_endpoint = os.environ.get("KUPIBILET_API_ENDPOINT")
     payload = json.dumps({
@@ -45,7 +45,15 @@ def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
     headers = {
         'Content-Type': 'application/json'
     }
-    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
+    request = {
+        "url": api_endpoint,
+        "data": payload,
+        "headers": headers
+    }
+    return request
+
+
+def get_routes_from_kupibilet(response: Response, count: int):
     data = response.json()
     if data["status"] == "fail":
         raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
