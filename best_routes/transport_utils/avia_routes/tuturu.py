@@ -1,8 +1,6 @@
 import json
 import requests
-import os
 from datetime import date, datetime
-from dotenv import load_dotenv
 from .segment import Segment
 from best_routes.exceptions import NoSuchAirportException, NoSuchRoutesException
 from .avia_route import AviaRoute
@@ -10,15 +8,12 @@ from best_routes.transport_utils import Place
 from requests import Response
 
 
-load_dotenv()
-
-
 #  service_class = Y or C. Y - эконом. C - бизнес
 def get_request_to_tuturu(departure_code: str, arrival_code: str,
                           departure_date: date, adult: int, child: int,
                           infant: int, service_class: str) -> dict:
 
-    api_endpoint = os.environ.get("TUTU_API_ENDPOINT")
+    api_endpoint = "https://offers-api.tutu.ru/avia/offers"
     departure_city_id = get_city_id(departure_code, "from")
     arrival_city_id = get_city_id(arrival_code, "to")
     payload = json.dumps({
@@ -161,9 +156,6 @@ def __get_routes(data: list, count: int) -> list:
         _route.places = __get_min_place(segments_id, common["fareApplications"],
                                         dictionary["avia"]["conditions"], data[0]["offers"])
         result_routes.append(_route)
-        if count != -1:
-            count -= 1
-            if count == 0:
-                break
 
-    return result_routes
+    return sorted(result_routes)[0:count]
+

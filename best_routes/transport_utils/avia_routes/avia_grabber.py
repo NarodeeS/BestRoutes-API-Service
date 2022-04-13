@@ -55,8 +55,7 @@ def get_avia_routes(content: dict) -> list:
         additional_info = request_objects[future]["additionalInfo"]
         routes.extend(callback(response, count, **additional_info))
 
-    sorted_routes = sorted(routes, key=lambda _route: _route.get_cheapest_place())
-    return [route.to_json() for route in sorted_routes]
+    return [route.to_json() for route in sorted(routes)]
 
 
 def get_avia_trips(content: dict) -> list:

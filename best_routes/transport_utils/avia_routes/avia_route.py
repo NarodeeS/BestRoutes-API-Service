@@ -14,19 +14,6 @@ class AviaRoute(Route):
         self.segments = segments
         self.source = source
 
-    def __str__(self) -> str:
-        return f"Departure: {self.departure}" \
-               f"{'(' + self.departure_code + ')' if self.departure_code is not None else ''}\n" \
-               f"Arrival: {self.arrival}" \
-               f"{'(' + self.arrival_code + ')' if self.arrival_code is not None else ''}\n" \
-               f"Departure date: {self.departure_datetime}\n" \
-               f"Arrival date: {self.arrival_datetime}\n" \
-               f"Duration: {self.duration}\n" \
-               f"Source: {self.source}\n" \
-               f"URL: {self.url}\n" \
-               f"Segments {self.get_segments_info()}\n" \
-               f"Places [\n{self.get_places_info()}\n]"
-
     def __eq__(self, other):
         if isinstance(other, AviaRoute):
             if self.departure_datetime == other.departure_datetime:
@@ -50,8 +37,8 @@ class AviaRoute(Route):
             "departureCode": self.departure_code,
             "arrival": self.arrival,
             "arrivalCode": self.arrival_code,
-            "departureDateTime": str(self.departure_datetime),
-            "arrivalDateTime": str(self.arrival_datetime),
+            "departureDateTime": self.departure_datetime.isoformat(),
+            "arrivalDateTime": self.arrival_datetime.isoformat(),
             "segments": [segment.to_json() for segment in self.segments],
             "places": [place.to_json() for place in self.places],
             "duration": self.duration,
