@@ -24,7 +24,7 @@ def exception_handler(processing_function):
         except (ValueError, KeyError):
             message = jsonify(message="incorrect request format", status="error")
             return make_response(message, 400)
-        except (ServiceNotRespondException, NoSuchRoutesException) as e:
+        except (ServiceNotRespondException, NoSuchRoutesException, NoSuchAirportException) as e:
             return {"status": "error", "message": str(e)}
     wrapper.__name__ = processing_function.__name__
     return wrapper

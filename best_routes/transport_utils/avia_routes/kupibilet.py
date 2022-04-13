@@ -1,23 +1,18 @@
 import json
-import requests
-import os
 from datetime import date, datetime
-from dotenv import load_dotenv
+from requests import Response
 from .segment import Segment
 from best_routes.exceptions import ServiceNotRespondException, NoSuchRoutesException
 from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
 
 
-load_dotenv()
-
-
 #  service_class = Y or C. Y - эконом. C - бизнес
-def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
-                                    departure_date: date, adult: int, child: int,
-                                    infant: int,  service_class: str, count: int) -> list:
+def get_request_to_kupibilet(departure_code: str, arrival_code: str,
+                             departure_date: date, adult: int, child: int,
+                             infant: int,  service_class: str) -> dict:
 
-    api_endpoint = os.environ.get("KUPIBILET_API_ENDPOINT")
+    api_endpoint = "https://flights-api-shopping-target-site.kupibilet.ru/v4/search/new"
     payload = json.dumps({
         "passengers": {
             "adult": adult,
@@ -45,14 +40,22 @@ def get_routes_from_kupibilet(departure_code: str, arrival_code: str,
     headers = {
         'Content-Type': 'application/json'
     }
-    response = requests.request(method="POST", url=api_endpoint, headers=headers, data=payload)
+    request = {
+        "url": api_endpoint,
+        "data": payload,
+        "headers": headers
+    }
+    return request
+
+
+def get_routes_from_kupibilet(response: Response, count: int):
     data = response.json()
     if data["status"] == "fail":
         raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
     routes = __get_routes(data, count)
     if len(routes) == 0:
         raise NoSuchRoutesException
-    return sorted(routes, key=lambda _route: _route.get_cheapest_place())
+    return routes
 
 
 def __make_url(data: dict) -> str:
@@ -118,9 +121,5 @@ def __get_routes(data: dict, count: int) -> list:
                                    segments, url, "https://www.kupibilet.ru/")
             avia_route.places = places
             _routes.append(avia_route)
-            if count != -1:
-                count -= 1
-                if count == 0:
-                    break
 
-    return _routes
+    return sorted(_routes)[0:count]

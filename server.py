@@ -1,4 +1,5 @@
 from flask import Flask, request, make_response, jsonify
+from datetime import datetime
 from best_routes import session, create_token, create_user, User, Token
 from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
     get_avia_trips_from_service, get_avia_trips, AviaService
@@ -7,7 +8,6 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from middleware import auth, exception_handler
 from dotenv import load_dotenv
 import os
-
 
 load_dotenv()
 app = Flask(__name__)
@@ -35,7 +35,7 @@ def routes_avia_tutu():
                                  status="OK"), 200)
 
 
-@app.route("/routes/avia/tutu/trips", methods=["GET", "POST"])
+@app.route("/routes/avia/trips/tutu", methods=["GET", "POST"])
 @auth
 @exception_handler
 def routes_avia_tutu_trip():
@@ -51,7 +51,7 @@ def routes_avia_kupibilet():
                                  status="OK"), 200)
 
 
-@app.route("/routes/avia/kupibilet/trips", methods=["GET", "POST"])
+@app.route("/routes/avia/trips/kupibilet", methods=["GET", "POST"])
 @auth
 def routes_avia_kupibilet_trip():
     return make_response(jsonify(result=get_avia_trips_from_service(AviaService.KUPIBILET, request.get_json()),
@@ -67,13 +67,15 @@ def routes_railway_rzd():
     from_station_node_id = content["fromStationNodeId"]  # from RZD suggests API
     to_station_code = content["toStationCode"]
     to_station_node_id = content["toStationNodeId"]
-    departure_datetime = content["departureDatetime"]
+    departure_datetime = datetime.fromisoformat(content["departureDatetime"])
+    count = content["count"]
     result = get_routes_from_rzd(from_station_code, from_station_node_id,
-                                 to_station_code, to_station_node_id, departure_datetime)
+                                 to_station_code, to_station_node_id,
+                                 departure_datetime, count)
     return make_response(jsonify(result=result, status="OK"), 200)
 
 
-@app.route("/routes/railway/rzd/trips", methods=["GET", "POST"])
+@app.route("/routes/railway/trips/rzd", methods=["GET", "POST"])
 @auth
 @exception_handler
 def routes_railway_rzd_trip():
@@ -82,10 +84,11 @@ def routes_railway_rzd_trip():
     from_station_node_id = content["fromStationNodeId"]
     to_station_code = content["toStationCode"]
     to_station_node_id = content["toStationNodeId"]
-    departure_datetime1 = content["departureDatetime1"]
-    departure_datetime2 = content["departureDateTime2"]
+    departure_datetime1 = datetime.fromisoformat(content["departureDatetime1"])
+    departure_datetime2 = datetime.fromisoformat(content["departureDatetime2"])
+    count = content["count"]
     result = get_routes_from_rzd_return(from_station_code, from_station_node_id, to_station_code,
-                                        to_station_node_id, departure_datetime1, departure_datetime2)
+                                        to_station_node_id, departure_datetime1, departure_datetime2, count)
     return make_response(jsonify(result=result, status="OK"), 200)
 
 
@@ -145,3 +148,8 @@ def user_quit():
 
 if __name__ == "__main__":
     app.run(host=os.environ.get("HOST"), port=os.environ.get("PORT"))
+
+
+@app.route("/docs", methods=["GET"])
+def docs():
+    pass

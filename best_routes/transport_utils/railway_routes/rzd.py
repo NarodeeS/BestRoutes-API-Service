@@ -1,53 +1,27 @@
 import requests
 import os
 from datetime import date, datetime
-from dotenv import load_dotenv
 from .train_route import TrainRoute
 from best_routes.transport_utils import Place
 
 
-load_dotenv()
-
-
 def get_routes_from_rzd(from_station_code: str, from_station_node_id: str,
                         to_station_code: str, to_station_node_id: str,
-                        dep_date: datetime) -> list:
-
-    api_endpoint = os.environ.get("RZD_API_ENDPOINT")
-    params = {
-        "service_provider": "B2B_RZD"
-    }
-    body = {
-        "Origin": from_station_code,
-        "Destination": to_station_code,
-        "DepartureDate": str(dep_date),
-        "TimeFrom": 0,
-        "TimeTo": 24,
-        "CarGrouping": "DontGroup",
-        "GetTrainsFromSchedule": True,
-        "GetByLocalTime": True,
-        "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
-    }
-    headers = {"User-Agent": os.environ.get("USER_AGENT")}
-
-    response = requests.request(method="POST", url=api_endpoint,
-                                params=params, json=body, headers=headers)
-    data = response.json()
-    url = __make_url(from_station_node_id, to_station_node_id, dep_date)
-    routes = __get_routes(data["Trains"], url)
-    sorted(routes, key=lambda _route: _route.get_cheapest_place())
+                        dep_date: datetime, count: int) -> list:
+    routes = __get_raw_routes_from_rzd(from_station_code, from_station_node_id,
+                                       to_station_code, to_station_node_id, dep_date, count)
+    return [route.to_json() for route in routes]
 
 
 # By default, without any sorting
 def get_routes_from_rzd_return(from_station_code: str, from_station_node_id: str,
                                to_station_code: str, to_station_node_id: str,
-                               dep_date1: datetime, dep_date2: datetime) -> list:
+                               dep_date1: datetime, dep_date2: datetime, count: int) -> list:
+    routes_there = __get_raw_routes_from_rzd(from_station_code, from_station_node_id,
+                                             to_station_code, to_station_node_id, dep_date1, count)
 
-    routes_there = get_routes_from_rzd(from_station_code, from_station_node_id,
-                                       to_station_code, to_station_node_id, dep_date1)
-
-    routes_back = get_routes_from_rzd(to_station_code, to_station_node_id,
-                                      from_station_code, from_station_node_id, dep_date2)
+    routes_back = __get_raw_routes_from_rzd(to_station_code, to_station_node_id,
+                                            from_station_code, from_station_node_id, dep_date2, count)
 
     result = []
     for there in routes_there:
@@ -55,15 +29,13 @@ def get_routes_from_rzd_return(from_station_code: str, from_station_node_id: str
             if len(there.places) != 0 and len(back.places) != 0:
                 trip_min_amount = there.get_cheapest_place().min_price + back.get_cheapest_place().min_price
                 trip = {
-                    "to": there,
-                    "back": back,
+                    "to": there.to_json(),
+                    "back": back.to_json(),
                     "tripMinCost": round(trip_min_amount, 1)
                 }
                 result.append(trip)
-            else:
-                print(there)
-                print(back)
-    return sorted(result, key=lambda _trip: _trip["TripMinCost"])
+
+    return sorted(result, key=lambda _trip: _trip["tripMinCost"])
 
 
 def __make_url(from_city_node_id: str, to_city_node_id: str, dep_date: date) -> str:
@@ -102,3 +74,33 @@ def __get_routes(trains: list, url: str) -> list:
             _routes.append(_route)
 
     return _routes
+
+
+def __get_raw_routes_from_rzd(from_station_code: str, from_station_node_id: str,
+                              to_station_code: str, to_station_node_id: str,
+                              dep_date: datetime, count: int) -> list:
+    api_endpoint = "https://ticket.rzd.ru/apib2b/p/Railway/V1/Search/TrainPricing"
+    params = {
+        "service_provider": "B2B_RZD"
+    }
+    body = {
+        "Origin": from_station_code,
+        "Destination": to_station_code,
+        "DepartureDate": str(dep_date),
+        "TimeFrom": 0,
+        "TimeTo": 24,
+        "CarGrouping": "DontGroup",
+        "GetTrainsFromSchedule": True,
+        "GetByLocalTime": True,
+        "SpecialPlacesDemand": "StandardPlacesAndForDisabledPersons"
+    }
+    headers = {"User-Agent": os.environ.get("USER_AGENT")}
+
+    response = requests.request(method="POST", url=api_endpoint,
+                                params=params, json=body, headers=headers)
+    data = response.json()
+    url = __make_url(from_station_node_id, to_station_node_id, dep_date)
+    routes = __get_routes(data["Trains"], url)
+    if 0 < count < len(routes):
+        routes = routes[0: count]
+    return routes

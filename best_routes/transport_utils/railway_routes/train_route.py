@@ -11,11 +11,14 @@ class TrainRoute(Route):
         self.has_electronic_registration = has_electronic_registration
         self.train_number = train_number
 
-    def __str__(self) -> str:
-        return f"From: {self.departure}\n" \
-               f"To: {self.arrival}\n" \
-               f"Train: {self.train_number}\n" \
-               f"Departure date: {self.departure_datetime}\n" \
-               f"Arrival date: {self.arrival_datetime}\n" \
-               f"URL: {self.url}\n" \
-               "Places: {\n" + self.get_places_info() + "\n}"
+    def to_json(self) -> dict:
+        return {
+            "departure": self.departure,
+            "arrival": self.arrival,
+            "trainNumber": self.train_number,
+            "hasElectronicRegistration": self.has_electronic_registration,
+            "departureDatetime": self.departure_datetime.isoformat(),
+            "arrivalDatetime": self.arrival_datetime.isoformat(),
+            "url": self.url,
+            "places": [place.to_json() for place in self.places]
+        }
