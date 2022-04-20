@@ -25,9 +25,3 @@ class Place:
     def __add__(self, other):
         if isinstance(other, Place):
             return self.min_price + other.min_price
-
-    def __str__(self) -> str:
-        return f"Type: {self.name}, " \
-            f"Count: {self.count}, " \
-            f"Min price: {self.min_price}, " \
-            f"Max price: {self.max_price}\n"

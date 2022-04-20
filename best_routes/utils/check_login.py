@@ -1,5 +1,5 @@
-from .models import Token
-from .database import session
+from best_routes.models import Token
+from best_routes.database import session
 
 
 def check_login(token: str) -> bool:

@@ -1,7 +1,7 @@
 import random
 import string
-from .database import session
-from .models import Token
+from best_routes.database import session
+from best_routes.models import Token
 
 
 def create_token(user_id: str) -> Token:

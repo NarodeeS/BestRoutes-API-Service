@@ -1,5 +1,5 @@
-from .database import session
-from .models import User
+from best_routes.database import session
+from best_routes.models import User
 
 
 def create_user(email: str, hashed_password: str, telegram_id: str) -> User:
