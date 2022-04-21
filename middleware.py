@@ -1,7 +1,8 @@
 from flask import request, make_response, jsonify
+from sqlalchemy.exc import PendingRollbackError
 from best_routes.utils import check_login
 from best_routes.exceptions import ServiceNotRespondException, \
-    NoSuchAirportException, NoSuchRoutesException
+    NoSuchAirportException, NoSuchRoutesException, UserAlreadyExistsException
 
 
 def auth(processing_function):
@@ -26,7 +27,11 @@ def exception_handler(processing_function):
             return make_response(message, 400)
         except (ConnectionError, ServiceNotRespondException) as e:
             return make_response(jsonify(status="error", message=str(e)), 500)
-        except (NoSuchRoutesException, NoSuchAirportException) as e:
+        except PendingRollbackError as e:
+            print(str(e))
+            return make_response(jsonify(status="error",
+                                         message=f"PendingRollbackError while working with database"))
+        except (NoSuchRoutesException, NoSuchAirportException, UserAlreadyExistsException) as e:
             return make_response(jsonify(status="error", message=str(e)), 400)
     wrapper.__name__ = processing_function.__name__
     return wrapper

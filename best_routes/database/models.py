@@ -10,7 +10,7 @@ class User(Base):
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
     telegram_id = Column(String(255), default=None)
-    id_developer = Column(Boolean(), nullable=False)
+    is_developer = Column(Boolean(), nullable=False)
     tokens = relationship("Token", cascade="all")
     tracked_avia_directions = relationship("TrackedAviaDirection", cascade="all")
     tracked_avia_trips = relationship("TrackedAviaTrip", cascade="all")
@@ -100,3 +100,4 @@ class Service(Base):
     name = Column(String(255), nullable=False)
     developer_id = Column(Integer(), ForeignKey(User.id), nullable=False)
     url = Column(String(255), nullable=False)
+    is_active = Column(Boolean(), nullable=False)

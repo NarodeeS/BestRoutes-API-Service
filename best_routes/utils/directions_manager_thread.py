@@ -4,8 +4,8 @@ from threading import Thread
 from datetime import date
 from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
 from concurrent.futures import ThreadPoolExecutor
-from ..database import session
-from ..models import User, Service
+from best_routes.database import session
+from best_routes.database.models import User, Service
 from time import sleep
 
 
@@ -47,7 +47,9 @@ def __send_to_all_services(content: dict) -> None:
             requests.post(url=service.url, data=content, timeout=3.15)
         except Timeout:
             print(f"Service {service.name} is not responding")
-            session.delete(service)
+            service.is_active = False
+            session.commit()
+            session.rollback()
 
 
 class DirectionsManagerThread(Thread):
@@ -64,5 +66,4 @@ class DirectionsManagerThread(Thread):
                 for user in users:
                     futures.append(executor.submit(user_task, user))
                 executor.shutdown(wait=True)
-            print("End of checking")
             sleep(self.interval)

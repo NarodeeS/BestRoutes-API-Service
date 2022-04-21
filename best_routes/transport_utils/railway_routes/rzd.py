@@ -96,8 +96,7 @@ def __get_raw_routes_from_rzd(from_station_code: str, from_station_node_id: str,
     }
     headers = {"User-Agent": os.environ.get("USER_AGENT")}
 
-    response = requests.request(method="POST", url=api_endpoint,
-                                params=params, json=body, headers=headers)
+    response = requests.post(url=api_endpoint, params=params, json=body, headers=headers)
     data = response.json()
     url = __make_url(from_station_node_id, to_station_node_id, dep_date)
     routes = __get_routes(data["Trains"], url)

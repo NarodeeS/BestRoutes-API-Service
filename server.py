@@ -1,19 +1,21 @@
-from flask import Flask, request, make_response, jsonify
+import flask
+from flask import Flask, request, make_response, jsonify, render_template, url_for, redirect, session
 from datetime import datetime, date
-from best_routes.utils import create_token, create_user, \
-    create_tracked_avia_direction, create_tracked_avia_trip, DirectionsManagerThread
-from best_routes import session, User
+from best_routes.utils import DirectionsManagerThread, delete_item
+from best_routes import User
+from best_routes.database import add_user, get_user_by_id, add_service, \
+    get_user_by_email, update_user_telegram_id, add_token, delete_token, \
+    add_avia_direction, add_avia_trip, delete_service, activate_service
 from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
     get_avia_trips_from_service, get_avia_trips, AviaService
 from best_routes.transport_utils.railway_routes import get_routes_from_rzd, get_routes_from_rzd_return
 from werkzeug.security import generate_password_hash, check_password_hash
 from middleware import auth, exception_handler
-from dotenv import load_dotenv
 import os
 
 
-load_dotenv()
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY")
 directions_manager = DirectionsManagerThread(float(os.getenv("CHECK_TIME")))
 directions_manager.start()
 
@@ -106,14 +108,12 @@ def user_login():
     password = content["password"]
     if email is None or password is None:
         raise ValueError
-    supposed_user = session.query(User).filter(User.email == email).first()
+    supposed_user = get_user_by_email(email)
     if supposed_user is not None:
         if check_password_hash(supposed_user.password, password):
             if content.get("telegramId") is not None:
-                supposed_user.telegram_id = content["telegramId"]
-                session.commit()
-                session.rollback()
-            user_token = create_token(supposed_user.id)
+                update_user_telegram_id(supposed_user, content.get("telegramId"))
+            user_token = add_token(supposed_user.id)
             response = make_response(jsonify(status="OK"), 200)
             response.headers.add("Token", user_token.value)
             return response
@@ -138,8 +138,8 @@ def user_register():
     telegram_id = None
     if content.get("telegramId") is not None:
         telegram_id = content["telegramId"]
-    new_user = create_user(email, hashed_password, telegram_id)
-    new_user_token = create_token(new_user.id)
+    new_user = add_user(email, hashed_password, telegram_id, False)
+    new_user_token = add_token(new_user.id)
     response = make_response(jsonify(status="OK"), 200)
     response.headers.add("Token", new_user_token.value)
     return response
@@ -153,9 +153,7 @@ def user_quit():
     user_tokens = __get_current_user().tokens
     for token in user_tokens:
         if token.value == user_token:
-            session.delete(token)
-            session.commit()
-            session.rollback()
+            delete_token(token)
             return make_response(jsonify(status="OK"), 200)
     return make_response(jsonify(status="error", message="No user with such token"))
 
@@ -176,9 +174,9 @@ def user_track_avia_add():
     child = content["child"]
     infant = content["infant"]
     min_cost = content["baseMinCost"]
-    create_tracked_avia_direction(user_id, departure_code,
-                                  arrival_code, departure_date, service_class,
-                                  adult, child, infant, min_cost, False)
+    add_avia_direction(user_id, departure_code,
+                       arrival_code, departure_date, service_class,
+                       adult, child, infant, min_cost, False)
     return make_response(jsonify(status="OK"), 200)
 
 
@@ -216,9 +214,9 @@ def user_track_avia_trip_add():
     infant = content["infant"]
     min_cost1 = content["baseMinCost1"]
     min_cost2 = content["baseMinCost2"]
-    create_tracked_avia_trip(user_id, departure_code, arrival_code, departure_date1,
-                             departure_date2, service_class, adult, child,
-                             infant, min_cost1, min_cost2)
+    add_avia_trip(user_id, departure_code, arrival_code, departure_date1,
+                  departure_date2, service_class, adult, child,
+                  infant, min_cost1, min_cost2)
     return make_response(jsonify(status="OK"), 200)
 
 
@@ -239,10 +237,84 @@ def user_track_avia_trip(trip_id: int):
     return __process_item(user.tracked_avia_trips, trip_id)
 
 
-def __get_current_user() -> User:
-    user_token = request.headers.get("Token")
-    user_id = int(user_token.split(":")[0])
-    user = session.query(User).filter(User.id == user_id).first()
+@app.route("/developer/auth", methods=["GET", "POST"])
+@exception_handler
+def developer_auth():
+    if session.get("user_id") is not None:
+        return redirect(url_for("developer_home"))
+    if request.method == "POST":
+        email = request.form.get("email")
+        password = request.form.get("password")
+        action_type = request.form.get("action")
+        user = None
+        if action_type == "login":
+            user = get_user_by_email(email)
+            if user is not None:
+                if check_password_hash(user.password, password):
+                    if not user.is_developer:
+                        return make_response(jsonify(status="error", message="User is not a developer"), 401)
+                else:
+                    return make_response(jsonify(status="error", message="Wrong credentials"), 403)
+            else:
+                return make_response(jsonify(status="error", message="No such user"), 401)
+        elif action_type == "register":
+            hashed_password = generate_password_hash(
+                password,
+                os.environ.get("HASH_METHOD"),
+                int(os.environ.get("SALT_ROUNDS"))
+            )
+            user = add_user(email, hashed_password, None, True)
+
+        session["user_id"] = user.id
+        return redirect(url_for("developer_home"))
+
+    else:
+        return render_template("developer_login.html")
+
+
+@app.route("/developer/home", methods=["GET"])
+@exception_handler
+def developer_home():
+    if flask.session.get("user_id") is not None:
+        user_id = session.get("user_id")
+        user_services = __get_current_user(user_id).services
+        return render_template("developer_home.html", services=user_services)
+    else:
+        return redirect(url_for("developer_auth"))
+
+
+@app.route("/developer/service", methods=["POST"])
+@exception_handler
+def developer_service_add():
+    service_name = request.form.get("service_name")
+    service_url = request.form.get("service_url")
+    developer_id = session.get("user_id")
+    add_service(service_name, service_url, developer_id)
+    return redirect(url_for("developer_home"))
+
+
+@app.route("/developer/service/delete/<int:service_id>", methods=["POST"])
+@exception_handler
+def developer_service_delete(service_id: int):
+    delete_service(service_id)
+    return redirect(url_for("developer_home"))
+
+
+@app.route("/developer/service/activate/<int:service_id>", methods=["POST"])
+@exception_handler
+def developer_service_activate(service_id: int):
+    activate_service(service_id)
+    return redirect(url_for("developer_home"))
+
+
+def __get_current_user(passed_user_id: int = None) -> User:
+    user = None
+    if passed_user_id is not None:
+        user = get_user_by_id(passed_user_id)
+    else:
+        user_token = request.headers.get("Token")
+        user_id = int(user_token.split(":")[0])
+        user = get_user_by_id(user_id)
     return user
 
 
@@ -252,13 +324,11 @@ def __process_item(collection: list, item_id: int):
             if request.method == "GET":
                 return make_response(jsonify(status="OK", result=item.to_json()), 200)
             elif request.method == "DELETE":
-                session.delete(item)
-                session.commit()
-                session.rollback()
+                delete_item(item)
                 return make_response(jsonify(status="OK", message="Deleted successfully"), 200)
     return make_response(jsonify(status="error", message="No such item"), 404)
 
 
 if __name__ == "__main__":
-    app.run(host=os.environ.get("HOST"), port=os.environ.get("PORT"))
+    app.run(host=os.environ.get("HOST"), port=os.environ.get("PORT"), load_dotenv=True)
 

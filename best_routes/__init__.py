@@ -1,2 +1,1 @@
-from .models import User, Token
-from .database import session
+from best_routes.database.models import User, Token

@@ -1,6 +1,3 @@
 from .check_login import check_login
-from .create_token import create_token
-from .create_user import create_user
-from .create_tracked_avia_trip import create_tracked_avia_trip
-from .create_tracked_avia_direction import create_tracked_avia_direction
+from .delete_item import delete_item
 from .directions_manager_thread import DirectionsManagerThread
