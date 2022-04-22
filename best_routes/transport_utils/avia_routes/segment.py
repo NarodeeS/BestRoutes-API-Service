@@ -30,11 +30,3 @@ class Segment(BaseRoute):
             "plane": self.plane
         }
 
-    def __str__(self) -> str:
-        return f"Departure: {self.departure}; " \
-               f"Arrival: {self.arrival}; " \
-               f"Departure date: {self.departure_datetime}; " \
-               f"Arrival date: {self.arrival_datetime}; " \
-               f"Duration: {self.duration_in_minutes} minutes; " \
-               f"Airline: {self.airline}' " \
-               f"Plane: {self.plane}"

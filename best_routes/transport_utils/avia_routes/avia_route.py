@@ -41,6 +41,7 @@ class AviaRoute(Route):
             "arrivalDateTime": self.arrival_datetime.isoformat(),
             "segments": [segment.to_json() for segment in self.segments],
             "places": [place.to_json() for place in self.places],
+            "minPrice": self.get_cheapest_place().min_price,
             "duration": self.duration,
             "source": self.source,
             "url": self.url,

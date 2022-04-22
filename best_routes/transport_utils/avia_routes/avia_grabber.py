@@ -7,7 +7,7 @@ from .avia_service import AviaService, get_all_services
 def get_avia_routes_from_service(service: AviaService, content: dict) -> list:
     count = content["count"]
     routes = []
-    session = FuturesSession()
+    session = FuturesSession(max_workers=10)
     request_object = service.get_request_object(content)
     callback = request_object["callback"]
     additional_info = request_object["additionalInfo"]
@@ -26,8 +26,8 @@ def get_avia_trips_from_service(service: AviaService, content: dict) -> list:
     request_object_to = service.get_request_object(content_to)
     request_object_back = service.get_request_object(content_back)
 
-    future_to = FuturesSession().post(**request_object_to["request"])
-    future_back = FuturesSession().post(**request_object_back["request"])
+    future_to = FuturesSession(max_workers=10).post(**request_object_to["request"])
+    future_back = FuturesSession(max_workers=10).post(**request_object_back["request"])
 
     routes_to = request_object_to["callback"](future_to.result(), count,
                                               **request_object_to["additionalInfo"])
@@ -41,7 +41,7 @@ def get_avia_routes(content: dict) -> list:
     routes = []
     request_objects = {}
     for service in get_all_services():
-        session = FuturesSession()
+        session = FuturesSession(max_workers=10)
         request_object = service.get_request_object(content)
         future = session.post(**request_object["request"])
         request_objects[future] = {
@@ -68,8 +68,8 @@ def get_avia_trips(content: dict) -> list:
     for avia_service in get_all_services():
         request_object_to = avia_service.get_request_object(content_to)
         request_object_back = avia_service.get_request_object(content_back)
-        future_to = FuturesSession().post(**request_object_to["request"])
-        future_back = FuturesSession().post(**request_object_back["request"])
+        future_to = FuturesSession(max_workers=10).post(**request_object_to["request"])
+        future_back = FuturesSession(max_workers=10).post(**request_object_back["request"])
         request_objects[future_to] = {
             "where": "to",
             "callback": request_object_to["callback"],
