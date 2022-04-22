@@ -1,31 +1,36 @@
 import requests
-from requests.exceptions import Timeout
+from requests.exceptions import Timeout, MissingSchema
 from threading import Thread
 from datetime import date
 from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
 from concurrent.futures import ThreadPoolExecutor
-from best_routes.database import session
-from best_routes.database.models import User, Service
+from best_routes.avia_direction_dao import get_directions_by_user_id, update_avia_direction_cost, delete_avia_direction
+from best_routes.avia_trip_dao import get_trips_by_user_id,update_avia_trip_cost
+from best_routes.service_dao import get_all_services, deactivate_service
+from best_routes.user_dao import get_all_users
+from best_routes.models import User
 from time import sleep
 
 
 def user_task(user: User) -> None:
-    for user_route in user.tracked_avia_directions:
-        if user_route.departure_date <= date.today():
-            routes = get_avia_routes(user_route.to_request_form())
-            if routes[0]["minPrice"] < user_route.direction_min_cost:
+    print("checking user " + str(user.id))
+    for user_direction in get_directions_by_user_id(user.id):
+        print("checking user direction " + str(user_direction.id))
+        if user_direction.departure_date >= str(date.today()):
+            routes = get_avia_routes(user_direction.to_request_form())
+            if routes[0]["minPrice"] < user_direction.direction_min_cost:
                 content = {
                     "type": "direction",
-                    "oldPrice": user_route.direction_min_cost,
+                    "oldPrice": user_direction.direction_min_cost,
                     "newPrice": routes[0]["minPrice"],
-                    "id": user_route.id
+                    "id": user_direction.id
                 }
-                user_route.direction_min_cost = routes[0].get_cheapest_place().min_price
-                session.commit()
-                session.rollback()
+                update_avia_direction_cost(user_direction.id, routes[0]["minPrice"])
                 __send_to_all_services(content)
+        else:
+            delete_avia_direction(user_direction.id)
 
-    for user_trip in user.tracked_avia_trips:
+    for user_trip in get_trips_by_user_id(user.id):
         trips = get_avia_trips(user_trip.to_request_form())
         if trips[0]["tripMinCost"] < user_trip.trip_min_cost:
             content = {
@@ -34,22 +39,19 @@ def user_task(user: User) -> None:
                 "newPrice": trips[0]["tripMinCost"],
                 "id": user_trip.id
             }
-            user_trip.trip_min_cost = trips[0]["tripMinCost"]
-            session.commit()
-            session.rollback()
+            update_avia_trip_cost(user_trip.id, trips[0]["tripMinCost"])
             __send_to_all_services(content)
 
 
 def __send_to_all_services(content: dict) -> None:
-    services = session.query(Service)
+    services = get_all_services()
     for service in services:
         try:
             requests.post(url=service.url, data=content, timeout=3.15)
-        except Timeout:
-            print(f"Service {service.name} is not responding")
-            service.is_active = False
-            session.commit()
-            session.rollback()
+        except (Timeout, MissingSchema):
+            deactivate_service(service.id)
+        except Exception as e:
+            print(type(e))
 
 
 class DirectionsManagerThread(Thread):
@@ -60,10 +62,11 @@ class DirectionsManagerThread(Thread):
 
     def run(self) -> None:
         while self.is_working:
-            users = session.query(User)
+            users = get_all_users()
             futures = []
             with ThreadPoolExecutor() as executor:
                 for user in users:
                     futures.append(executor.submit(user_task, user))
                 executor.shutdown(wait=True)
+                print("end checking")
             sleep(self.interval)

@@ -1,23 +1,19 @@
 import flask
-from flask import Flask, request, make_response, jsonify, render_template, url_for, redirect, session
+from best_routes import app
+from flask import request, make_response, jsonify, render_template, url_for, redirect, session
 from datetime import datetime, date
-from best_routes.utils import DirectionsManagerThread, delete_item
-from best_routes import User
-from best_routes.database import add_user, get_user_by_id, add_service, \
-    get_user_by_email, update_user_telegram_id, add_token, delete_token, \
-    add_avia_direction, add_avia_trip, delete_service, activate_service
+from best_routes.delete_item import delete_item
+from best_routes.user_dao import add_user, get_user_by_email, update_user_telegram_id, get_user_by_id
+from best_routes.token_dao import add_token, delete_token
+from best_routes.avia_direction_dao import add_avia_direction
+from best_routes.avia_trip_dao import add_avia_trip
+from best_routes.service_dao import activate_service, add_service, delete_service
 from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
     get_avia_trips_from_service, get_avia_trips, AviaService
 from best_routes.transport_utils.railway_routes import get_routes_from_rzd, get_routes_from_rzd_return
 from werkzeug.security import generate_password_hash, check_password_hash
-from middleware import auth, exception_handler
+from best_routes.middleware import auth, exception_handler
 import os
-
-
-app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY")
-directions_manager = DirectionsManagerThread(float(os.getenv("CHECK_TIME")))
-directions_manager.start()
 
 
 @app.route("/routes/avia", methods=["GET", "POST"])
@@ -112,7 +108,7 @@ def user_login():
     if supposed_user is not None:
         if check_password_hash(supposed_user.password, password):
             if content.get("telegramId") is not None:
-                update_user_telegram_id(supposed_user, content.get("telegramId"))
+                update_user_telegram_id(supposed_user.id, content.get("telegramId"))
             user_token = add_token(supposed_user.id)
             response = make_response(jsonify(status="OK"), 200)
             response.headers.add("Token", user_token.value)
@@ -167,7 +163,7 @@ def user_track_avia_add():
     departure_code = content["departureCode"]
     arrival_code = content["arrivalCode"]
     departure_date = date.fromisoformat(content["departureDate"])
-    if departure_date > date.today():
+    if departure_date < date.today():
         raise ValueError()
     service_class = content["serviceClass"]
     adult = content["adult"]
@@ -307,7 +303,7 @@ def developer_service_activate(service_id: int):
     return redirect(url_for("developer_home"))
 
 
-def __get_current_user(passed_user_id: int = None) -> User:
+def __get_current_user(passed_user_id: int = None):
     user = None
     if passed_user_id is not None:
         user = get_user_by_id(passed_user_id)
@@ -327,8 +323,3 @@ def __process_item(collection: list, item_id: int):
                 delete_item(item)
                 return make_response(jsonify(status="OK", message="Deleted successfully"), 200)
     return make_response(jsonify(status="error", message="No such item"), 404)
-
-
-if __name__ == "__main__":
-    app.run(host=os.environ.get("HOST"), port=os.environ.get("PORT"), load_dotenv=True)
-

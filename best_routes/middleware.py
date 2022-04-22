@@ -1,6 +1,6 @@
 from flask import request, make_response, jsonify
 from sqlalchemy.exc import PendingRollbackError
-from best_routes.utils import check_login
+from best_routes.check_login import check_login
 from best_routes.exceptions import ServiceNotRespondException, \
     NoSuchAirportException, NoSuchRoutesException, UserAlreadyExistsException
 
