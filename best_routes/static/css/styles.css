@@ -17,3 +17,10 @@ hr {
     width: 650px;
     margin: 50px auto;
 }
+
+#quit_button{
+    margin: 30px;
+    position: absolute;
+    top: 0;
+    right: 0;
+}

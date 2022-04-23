@@ -19,6 +19,12 @@ def update_user_telegram_id(user_id: int, telegram_id: str) -> None:
     db.session.commit()
 
 
+def make_user_developer(user_id: int) -> None:
+    user = User.query.filter_by(id=user_id).first()
+    user.is_developer = True
+    db.session.commit()
+
+
 def add_user(email: str, hashed_password: str, telegram_id: str, is_developer: bool) -> User:
     user = User.query.filter_by(email=email).first()
     if user is not None:

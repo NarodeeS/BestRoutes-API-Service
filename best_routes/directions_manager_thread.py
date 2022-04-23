@@ -13,9 +13,7 @@ from time import sleep
 
 
 def user_task(user: User) -> None:
-    print("checking user " + str(user.id))
     for user_direction in get_directions_by_user_id(user.id):
-        print("checking user direction " + str(user_direction.id))
         if user_direction.departure_date >= str(date.today()):
             routes = get_avia_routes(user_direction.to_request_form())
             if routes[0]["minPrice"] < user_direction.direction_min_cost:
@@ -43,6 +41,15 @@ def user_task(user: User) -> None:
             __send_to_all_services(content)
 
 
+def checking_task() -> None:
+    users = get_all_users()
+    futures = []
+    with ThreadPoolExecutor() as executor:
+        for user in users:
+            futures.append(executor.submit(user_task, user))
+        executor.shutdown(wait=True)
+
+
 def __send_to_all_services(content: dict) -> None:
     services = get_all_services()
     for service in services:
@@ -62,11 +69,7 @@ class DirectionsManagerThread(Thread):
 
     def run(self) -> None:
         while self.is_working:
-            users = get_all_users()
-            futures = []
-            with ThreadPoolExecutor() as executor:
-                for user in users:
-                    futures.append(executor.submit(user_task, user))
-                executor.shutdown(wait=True)
-                print("end checking")
+            checking_thread = Thread(target=checking_task)
+            checking_thread.start()
+            checking_thread.join()
             sleep(self.interval)

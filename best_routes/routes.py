@@ -3,7 +3,8 @@ from best_routes import app
 from flask import request, make_response, jsonify, render_template, url_for, redirect, session
 from datetime import datetime, date
 from best_routes.delete_item import delete_item
-from best_routes.user_dao import add_user, get_user_by_email, update_user_telegram_id, get_user_by_id
+from best_routes.user_dao import add_user, get_user_by_email, update_user_telegram_id, \
+    get_user_by_id, make_user_developer
 from best_routes.token_dao import add_token, delete_token
 from best_routes.avia_direction_dao import add_avia_direction
 from best_routes.avia_trip_dao import add_avia_trip
@@ -248,7 +249,7 @@ def developer_auth():
             if user is not None:
                 if check_password_hash(user.password, password):
                     if not user.is_developer:
-                        return make_response(jsonify(status="error", message="User is not a developer"), 401)
+                        make_user_developer(user.id)
                 else:
                     return make_response(jsonify(status="error", message="Wrong credentials"), 403)
             else:
@@ -266,6 +267,13 @@ def developer_auth():
 
     else:
         return render_template("developer_login.html")
+
+
+@app.route("/developer/quit", methods=["POST", "GET"])
+@exception_handler
+def developer_quit():
+    flask.session.pop("user_id")
+    return redirect(url_for("developer_auth"))
 
 
 @app.route("/developer/home", methods=["GET"])
@@ -289,18 +297,24 @@ def developer_service_add():
     return redirect(url_for("developer_home"))
 
 
-@app.route("/developer/service/delete/<int:service_id>", methods=["POST"])
+@app.route("/developer/service/delete/<int:service_id>", methods=["POST", "GET"])
 @exception_handler
 def developer_service_delete(service_id: int):
-    delete_service(service_id)
-    return redirect(url_for("developer_home"))
+    if __check_service_belonging(flask.session.get("user_id"), service_id):
+        delete_service(service_id)
+        return redirect(url_for("developer_home"))
+    else:
+        return make_response(jsonify(status="error", message="This user does not have such service"))
 
 
-@app.route("/developer/service/activate/<int:service_id>", methods=["POST"])
+@app.route("/developer/service/activate/<int:service_id>", methods=["POST", "GET"])
 @exception_handler
 def developer_service_activate(service_id: int):
-    activate_service(service_id)
-    return redirect(url_for("developer_home"))
+    if __check_service_belonging(flask.session.get("user_id"), service_id):
+        activate_service(service_id)
+        return redirect(url_for("developer_home"))
+    else:
+        return make_response(jsonify(status="error", message="This user does not have such service"))
 
 
 def __get_current_user(passed_user_id: int = None):
@@ -312,6 +326,15 @@ def __get_current_user(passed_user_id: int = None):
         user_id = int(user_token.split(":")[0])
         user = get_user_by_id(user_id)
     return user
+
+
+def __check_service_belonging(user_id: int, service_id: int) -> bool:
+    if user_id is not None:
+        services = get_user_by_id(user_id).services
+        for service in services:
+            if service.id == service_id:
+                return True
+    return False
 
 
 def __process_item(collection: list, item_id: int):
