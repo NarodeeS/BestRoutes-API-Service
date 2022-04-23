@@ -1,4 +1,4 @@
-from best_routes.token_dao import get_tokens_by_user_id
+from best_routes.database_interaction.token_dao import get_tokens_by_user_id
 
 
 def check_login(token: str) -> bool:

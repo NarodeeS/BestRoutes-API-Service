@@ -4,16 +4,19 @@ from threading import Thread
 from datetime import date
 from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
 from concurrent.futures import ThreadPoolExecutor
-from best_routes.avia_direction_dao import get_directions_by_user_id, update_avia_direction_cost, delete_avia_direction
-from best_routes.avia_trip_dao import get_trips_by_user_id,update_avia_trip_cost
-from best_routes.service_dao import get_all_services, deactivate_service
-from best_routes.user_dao import get_all_users
+from best_routes.database_interaction import get_directions_by_user_id, \
+    update_avia_direction_cost, delete_avia_direction
+from best_routes.database_interaction import get_trips_by_user_id, update_avia_trip_cost
+from best_routes.database_interaction import get_all_services, deactivate_service
+from best_routes.database_interaction import get_all_users
 from best_routes.models import User
 from time import sleep
 
 
 def user_task(user: User) -> None:
+    print("checking user " + str(user.id))
     for user_direction in get_directions_by_user_id(user.id):
+        print("checking user direction " + str(user_direction.id))
         if user_direction.departure_date >= str(date.today()):
             routes = get_avia_routes(user_direction.to_request_form())
             if routes[0]["minPrice"] < user_direction.direction_min_cost:
@@ -21,7 +24,8 @@ def user_task(user: User) -> None:
                     "type": "direction",
                     "oldPrice": user_direction.direction_min_cost,
                     "newPrice": routes[0]["minPrice"],
-                    "id": user_direction.id
+                    "directionId": user_direction.id,
+                    "userId": user.id
                 }
                 update_avia_direction_cost(user_direction.id, routes[0]["minPrice"])
                 __send_to_all_services(content)
@@ -35,7 +39,8 @@ def user_task(user: User) -> None:
                 "type": "trip",
                 "oldPrice": user_trip.trip_min_cost,
                 "newPrice": trips[0]["tripMinCost"],
-                "id": user_trip.id
+                "tripId": user_trip.id,
+                "userId": user.id
             }
             update_avia_trip_cost(user_trip.id, trips[0]["tripMinCost"])
             __send_to_all_services(content)
