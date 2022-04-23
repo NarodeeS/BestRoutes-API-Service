@@ -2,13 +2,7 @@ import flask
 from best_routes import app
 from flask import request, make_response, jsonify, render_template, url_for, redirect, session
 from datetime import datetime, date
-from best_routes.database_interaction import delete_item
-from best_routes.database_interaction import add_user, get_user_by_email, update_user_telegram_id, \
-    get_user_by_id, make_user_developer
-from best_routes.database_interaction import add_token, delete_token
-from best_routes.database_interaction import add_avia_direction
-from best_routes.database_interaction import add_avia_trip
-from best_routes.database_interaction import activate_service, add_service, delete_service
+from best_routes.database_interaction import *
 from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
     get_avia_trips_from_service, get_avia_trips, AviaService
 from best_routes.transport_utils.railway_routes import get_routes_from_rzd, get_routes_from_rzd_return

@@ -4,12 +4,8 @@ from threading import Thread
 from datetime import date
 from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
 from concurrent.futures import ThreadPoolExecutor
-from best_routes.database_interaction import get_directions_by_user_id, \
-    update_avia_direction_cost, delete_avia_direction
-from best_routes.database_interaction import get_trips_by_user_id, update_avia_trip_cost
-from best_routes.database_interaction import get_all_services, deactivate_service
-from best_routes.database_interaction import get_all_users
-from best_routes.models import User
+from best_routes.database_interaction import *
+from best_routes.database_interaction.models import User
 from time import sleep
 
 
@@ -17,7 +13,7 @@ def user_task(user: User) -> None:
     print("checking user " + str(user.id))
     for user_direction in get_directions_by_user_id(user.id):
         print("checking user direction " + str(user_direction.id))
-        if user_direction.departure_date >= str(date.today()):
+        if user_direction.departure_date >= date.today():
             routes = get_avia_routes(user_direction.to_request_form())
             if routes[0]["minPrice"] < user_direction.direction_min_cost:
                 content = {
@@ -44,6 +40,10 @@ def user_task(user: User) -> None:
             }
             update_avia_trip_cost(user_trip.id, trips[0]["tripMinCost"])
             __send_to_all_services(content)
+
+
+def checking_task_new() -> None:
+    pass
 
 
 def checking_task() -> None:

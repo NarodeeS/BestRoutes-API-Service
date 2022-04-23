@@ -1,41 +1,41 @@
-from best_routes.models import User
+from best_routes.database_interaction.models import User
 from best_routes.exceptions import UserAlreadyExistsException
-from best_routes import db
+from .database import db_session
 
 
 def get_user_by_id(user_id: int) -> User:
-    user = User.query.filter_by(id=user_id).first()
+    user = db_session.query(User).filter(User.id == user_id).first()
     return user
 
 
 def get_user_by_email(user_email: int) -> User:
-    user = User.query.filter_by(email=user_email).first()
+    user = db_session.query(User).filter(User.email == user_email).first()
     return user
 
 
 def update_user_telegram_id(user_id: int, telegram_id: str) -> None:
-    user = User.query.filter_by(id=user_id).first()
+    user = db_session.query(User).filter(User.id == user_id).first()
     user.telegram_id = telegram_id
-    db.session.commit()
+    db_session.commit()
 
 
 def make_user_developer(user_id: int) -> None:
-    user = User.query.filter_by(id=user_id).first()
+    user = db_session.query(User).filter(User.id == user_id).first()
     user.is_developer = True
-    db.session.commit()
+    db_session.commit()
 
 
 def add_user(email: str, hashed_password: str, telegram_id: str, is_developer: bool) -> User:
-    user = User.query.filter_by(email=email).first()
+    user = db_session.query(User).filter(User.email == email).first()
     if user is not None:
         raise UserAlreadyExistsException(email)
     new_user = User(email=email, password=hashed_password,
                     telegram_id=telegram_id, is_developer=is_developer)
-    db.session.add(new_user)
-    db.session.commit()
+    db_session.add(new_user)
+    db_session.commit()
     return new_user
 
 
 def get_all_users() -> list:
-    users = User.query.all()
+    users = db_session.query(User)
     return users

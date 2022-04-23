@@ -1,6 +1,6 @@
 from datetime import date
-from best_routes.models import TrackedAviaDirection
-from best_routes import db
+from best_routes.database_interaction.models import TrackedAviaDirection
+from .database import db_session
 
 
 def add_avia_direction(user_id: int, departure_code: str,
@@ -12,26 +12,25 @@ def add_avia_direction(user_id: int, departure_code: str,
                                           arrival_code=arrival_code, departure_date=departure_date,
                                           service_class=service_class, adult=adult, child=child, infant=infant,
                                           direction_min_cost=direction_min_cost, in_trip=in_trip)
-    db.session.add(avia_direction)
-    db.session.commit()
+    db_session.add(avia_direction)
+    db_session.commit()
     return avia_direction
 
 
 def delete_avia_direction(direction_id: int):
-    avia_direction = TrackedAviaDirection.query.filter_by(id=direction_id).first()
-    db.session.delete(avia_direction)
-    db.session.commit()
+    avia_direction = db_session.query(TrackedAviaDirection)\
+        .filter(TrackedAviaDirection.id == direction_id).first()
+    db_session.delete(avia_direction)
+    db_session.commit()
 
 
 def update_avia_direction_cost(direction_id: int, new_cost: int) -> None:
-    avia_direction = TrackedAviaDirection.query.filter_by(id=direction_id).first()
+    avia_direction = db_session.query(TrackedAviaDirection)\
+        .filter(TrackedAviaDirection.id == direction_id).first()
     avia_direction.direction_min_cost = new_cost
-    db.session.commit()
+    db_session.commit()
 
 
 def get_directions_by_user_id(user_id: int) -> list:
-    return TrackedAviaDirection.query.filter_by(user_id=user_id)
-
-
-
-
+    return db_session.query(TrackedAviaDirection)\
+        .filter(TrackedAviaDirection.user_id == user_id)
