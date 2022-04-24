@@ -20,9 +20,9 @@ def add_avia_trip(user_id: int, departure_code: str,
                                           direction_min_cost=min_cost2, in_trip=True)
 
     db_session.add(direction_to)
-
+    db_session.commit()
     db_session.add(direction_back)
-
+    db_session.commit()
     avia_trip = TrackedAviaTrip(user_id=user_id, to_direction_id=direction_to.id,
                                 back_direction_id=direction_back.id,
                                 trip_min_cost=direction_to.direction_min_cost + direction_back.direction_min_cost)

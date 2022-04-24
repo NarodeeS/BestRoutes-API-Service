@@ -114,7 +114,7 @@ def __get_routes(data: dict, count: int) -> list:
         index = _route["raw"]["index"]
         min_price = __get_min_price(index, data["tickets"])
         if min_price != -1:
-            min_price = round(min_price / data["currency_rate"])
+            min_price = round(min_price / 100)
             places = [Place("Минимальный", None, min_price, min_price)]
             avia_route = AviaRoute(departure, departure_code, arrival, arrival_code,
                                    departure_datetime, arrival_datetime, duration_in_minutes,

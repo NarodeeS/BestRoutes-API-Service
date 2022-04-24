@@ -71,8 +71,8 @@ class TrackedAviaTrip(Base):
         return {
             "departureCode": self.direction_to.departure_code,
             "arrivalCode": self.direction_to.arrival_code,
-            "departureDate1": self.direction_to.departure_date,
-            "departureDate2": self.direction_back.departure_date,
+            "departureDate1": str(self.direction_to.departure_date),
+            "departureDate2": str(self.direction_back.departure_date),
             "adult": self.direction_to.adult,
             "child": self.direction_to.child,
             "infant": self.direction_to.infant,

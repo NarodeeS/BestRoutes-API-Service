@@ -105,8 +105,7 @@ def user_login():
             if content.get("telegramId") is not None:
                 update_user_telegram_id(supposed_user.id, content.get("telegramId"))
             user_token = add_token(supposed_user.id)
-            response = make_response(jsonify(status="OK"), 200)
-            response.headers.add("Token", user_token.value)
+            response = make_response(jsonify(status="OK", token=user_token.value), 200)
             return response
         return make_response(jsonify(status="error", message="Wrong credentials"), 403)
     else:
@@ -131,8 +130,7 @@ def user_register():
         telegram_id = content["telegramId"]
     new_user = add_user(email, hashed_password, telegram_id, False)
     new_user_token = add_token(new_user.id)
-    response = make_response(jsonify(status="OK"), 200)
-    response.headers.add("Token", new_user_token.value)
+    response = make_response(jsonify(status="OK", token=new_user_token.value), 200)
     return response
 
 
@@ -154,20 +152,20 @@ def user_quit():
 @auth
 def user_track_avia_add():
     user_id = __get_current_user().id
-    content = request.get_json()
-    departure_code = content["departureCode"]
-    arrival_code = content["arrivalCode"]
-    departure_date = date.fromisoformat(content["departureDate"])
+    args = request.args
+    departure_code = args["departureCode"]
+    arrival_code = args["arrivalCode"]
+    departure_date = date.fromisoformat(request.args["departureDate"])
     if departure_date < date.today():
         raise ValueError()
-    service_class = content["serviceClass"]
-    adult = content["adult"]
-    child = content["child"]
-    infant = content["infant"]
-    min_cost = content["baseMinCost"]
+    service_class = args["serviceClass"]
+    adult = args["adult"]
+    child = args["child"]
+    infant = args["infant"]
+    min_cost = args["baseMinCost"]
     add_avia_direction(user_id, departure_code,
                        arrival_code, departure_date, service_class,
-                       adult, child, infant, min_cost, False)
+                       adult, child, infant, min_cost)
     return make_response(jsonify(status="OK"), 200)
 
 
@@ -194,17 +192,17 @@ def user_track_avia(direction_id: int):
 def user_track_avia_trip_add():
     user_token = request.headers.get("Token")
     user_id = int(user_token.split(":")[0])
-    content = request.get_json()
-    departure_code = content["departureCode"]
-    arrival_code = content["arrivalCode"]
-    departure_date1 = date.fromisoformat(content["departureDate1"])
-    departure_date2 = date.fromisoformat(content["departureDate2"])
-    service_class = content["serviceClass"]
-    adult = content["adult"]
-    child = content["child"]
-    infant = content["infant"]
-    min_cost1 = content["baseMinCost1"]
-    min_cost2 = content["baseMinCost2"]
+    args = request.args
+    departure_code = args["departureCode"]
+    arrival_code = args["arrivalCode"]
+    departure_date1 = date.fromisoformat(args["departureDate1"])
+    departure_date2 = date.fromisoformat(args["departureDate2"])
+    service_class = args["serviceClass"]
+    adult = args["adult"]
+    child = args["child"]
+    infant = args["infant"]
+    min_cost1 = args["baseMinCost1"]
+    min_cost2 = args["baseMinCost2"]
     add_avia_trip(user_id, departure_code, arrival_code, departure_date1,
                   departure_date2, service_class, adult, child,
                   infant, min_cost1, min_cost2)
@@ -258,7 +256,6 @@ def developer_auth():
 
         session["user_id"] = user.id
         return redirect(url_for("developer_home"))
-
     else:
         return render_template("developer_login.html")
 
@@ -332,6 +329,8 @@ def __check_service_belonging(user_id: int, service_id: int) -> bool:
 
 
 def __process_item(collection: list, item_id: int):
+    if item_id < 0 or item_id > len(collection)-1:
+        raise ValueError()
     for item in collection:
         if item.id == item_id:
             if request.method == "GET":
