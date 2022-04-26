@@ -256,8 +256,6 @@ def __check_service_belonging(user_id: int, service_id: int) -> bool:
 
 
 def __process_item(collection: list, item_id: int):
-    if item_id < 0 or item_id > len(collection)-1:
-        raise ValueError()
     for item in collection:
         if item.id == item_id:
             if request.method == "GET":

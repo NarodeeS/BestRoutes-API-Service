@@ -1,5 +1,6 @@
 import requests
-from requests.exceptions import Timeout, MissingSchema
+import json
+from requests.exceptions import Timeout, MissingSchema, ConnectionError
 from threading import Thread
 from datetime import date
 from best_routes.transport_utils.avia_routes import get_avia_routes
@@ -10,9 +11,7 @@ from time import sleep
 
 
 def user_task(user: User) -> None:
-    print("checking user " + str(user.id))
     for user_direction in get_directions_by_user_id(user.id):
-        print("checking user direction " + str(user_direction.id))
         if not user_direction.in_trip:
             if user_direction.departure_date >= date.today():
                 routes = get_avia_routes(user_direction.to_request_form())
@@ -30,7 +29,6 @@ def user_task(user: User) -> None:
                 delete_avia_direction(user_direction.id)
 
     for user_trip in get_trips_by_user_id(user.id):
-        print("checking user trip " + str(user_trip.id))
         direction_to = user_trip.direction_to
         direction_back = user_trip.direction_back
         routes_to = get_avia_routes(direction_to.to_request_form())
@@ -65,13 +63,15 @@ def checking_task() -> None:
 
 def __send_to_all_services(content: dict) -> None:
     services = get_all_services()
+    headers = {
+        "Content-Type": "application/json"
+    }
     for service in services:
-        try:
-            requests.post(url=service.url, data=content, timeout=3.15)
-        except (Timeout, MissingSchema):
-            deactivate_service(service.id)
-        except Exception as e:
-            print(type(e))
+        if service.is_active:
+            try:
+                requests.post(url=service.url, data=json.dumps(content), headers=headers, timeout=3.15)
+            except (Timeout, MissingSchema, ConnectionError):
+                deactivate_service(service.id)
 
 
 class DirectionsManagerThread(Thread):

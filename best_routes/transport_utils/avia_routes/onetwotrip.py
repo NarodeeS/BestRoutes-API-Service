@@ -40,6 +40,8 @@ def get_request_to_onetwotrip(departure_code: str, arrival_code: str,
 
 def get_routes_from_onetwotrip(response: Response):
     data = response.json()
+    if "error" in data.keys():
+        return []
     routes = __get_routes(data)
     return sorted(routes)
 

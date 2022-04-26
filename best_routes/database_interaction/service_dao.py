@@ -17,7 +17,7 @@ def delete_service(service_id: int) -> None:
 
 
 def get_all_services() -> list:
-    return Service.query.all()
+    return db_session.query(Service).all()
 
 
 def activate_service(service_id: int) -> None:
