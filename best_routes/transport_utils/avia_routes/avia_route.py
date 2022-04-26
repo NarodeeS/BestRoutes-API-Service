@@ -5,13 +5,14 @@ from best_routes.transport_utils import Route
 class AviaRoute(Route):
     def __init__(self, departure: str, departure_code: str, arrival: str,
                  arrival_code: str, departure_datetime: datetime,
-                 arrival_datetime: datetime, duration: int, segments: list, url: str, source: str) -> None:
+                 arrival_datetime: datetime, duration: int, segments: list, places: list, url: str, source: str) -> None:
 
         super().__init__(departure, arrival, departure_datetime, arrival_datetime, url)
         self.departure_code = departure_code
         self.arrival_code = arrival_code
         self.duration = duration
         self.segments = segments
+        self.places = places
         self.source = source
 
     def __eq__(self, other):

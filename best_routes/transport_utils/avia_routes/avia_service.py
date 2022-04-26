@@ -2,12 +2,13 @@ from enum import Enum
 from datetime import date
 from .tuturu import get_request_to_tuturu, get_city_id, get_routes_from_tuturu
 from .kupibilet import get_request_to_kupibilet, get_routes_from_kupibilet
+from .onetwotrip import get_request_to_onetwotrip, get_routes_from_onetwotrip
 from best_routes.exceptions import NoSuchRoutesException
 
 
 def get_all_services() -> list:
     return [AviaService.TUTU,
-            AviaService.KUPIBILET]
+            AviaService.KUPIBILET, AviaService.ONE_TWO_TRIP]
 
 
 def prepare_content_routes(content: dict) -> dict:
@@ -29,6 +30,7 @@ def prepare_content_routes(content: dict) -> dict:
 class AviaService(Enum):
     TUTU = 1
     KUPIBILET = 2
+    ONE_TWO_TRIP = 3
 
     def get_request_object(self, content: dict) -> dict:
         if self.name == AviaService.TUTU.name:
@@ -40,11 +42,21 @@ class AviaService(Enum):
                 "additionalInfo": {
                     "departureId": departure_city_id,
                     "arrivalId": arrival_city_id
-                }
+                },
+                "method": "GET"
             }
         elif self.name == AviaService.KUPIBILET.name:
             return {
                 "request": get_request_to_kupibilet(**prepare_content_routes(content)),
                 "callback": get_routes_from_kupibilet,
-                "additionalInfo": {}
+                "additionalInfo": {},
+                "method": "POST"
             }
+        elif self.name == AviaService.ONE_TWO_TRIP.name:
+            return {
+                "request": get_request_to_onetwotrip(**prepare_content_routes(content)),
+                "callback": get_routes_from_onetwotrip,
+                "additionalInfo": {},
+                "method": "GET"
+            }
+

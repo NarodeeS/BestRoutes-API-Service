@@ -13,24 +13,17 @@ def get_user_by_email(user_email: int) -> User:
     return user
 
 
-def update_user_telegram_id(user_id: int, telegram_id: str) -> None:
-    user = db_session.query(User).filter(User.id == user_id).first()
-    user.telegram_id = telegram_id
-    db_session.commit()
-
-
 def make_user_developer(user_id: int) -> None:
     user = db_session.query(User).filter(User.id == user_id).first()
     user.is_developer = True
     db_session.commit()
 
 
-def add_user(email: str, hashed_password: str, telegram_id: str, is_developer: bool) -> User:
+def add_user(email: str, hashed_password: str, is_developer: bool) -> User:
     user = db_session.query(User).filter(User.email == email).first()
     if user is not None:
         raise UserAlreadyExistsException(email)
-    new_user = User(email=email, password=hashed_password,
-                    telegram_id=telegram_id, is_developer=is_developer)
+    new_user = User(email=email, password=hashed_password, is_developer=is_developer)
     db_session.add(new_user)
     db_session.commit()
     return new_user

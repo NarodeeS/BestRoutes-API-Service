@@ -5,29 +5,28 @@ from .avia_service import AviaService, get_all_services
 
 
 def get_avia_routes_from_service(service: AviaService, content: dict) -> list:
-    count = content["count"]
+    count = int(content["count"])
     routes = []
-    session = FuturesSession(max_workers=10)
     request_object = service.get_request_object(content)
     callback = request_object["callback"]
     additional_info = request_object["additionalInfo"]
-    future = session.post(**request_object["request"])
+    future = __get_future(request_object)
     response = future.result()
     routes.extend(callback(response, count, **additional_info))
     return [route.to_json() for route in routes]
 
 
 def get_avia_trips_from_service(service: AviaService, content: dict) -> list:
-    count = content["count"]
-    content_to = content
-    content_back = copy.deepcopy(content)
+    count = int(content["count"])
+    content_to = __copy_dict(content)
+    content_back = __copy_dict(content)
     __fill_contents(content_to, content_back, content)
 
     request_object_to = service.get_request_object(content_to)
     request_object_back = service.get_request_object(content_back)
 
-    future_to = FuturesSession(max_workers=10).post(**request_object_to["request"])
-    future_back = FuturesSession(max_workers=10).post(**request_object_back["request"])
+    future_to = __get_future(request_object_to)
+    future_back = __get_future(request_object_back)
 
     routes_to = request_object_to["callback"](future_to.result(), count,
                                               **request_object_to["additionalInfo"])
@@ -37,13 +36,12 @@ def get_avia_trips_from_service(service: AviaService, content: dict) -> list:
 
 
 def get_avia_routes(content: dict) -> list:
-    count = content["count"]
+    count = int(content["count"])
     routes = []
     request_objects = {}
     for service in get_all_services():
-        session = FuturesSession(max_workers=10)
         request_object = service.get_request_object(content)
-        future = session.post(**request_object["request"])
+        future = __get_future(request_object)
         request_objects[future] = {
             "callback": request_object["callback"],
             "additionalInfo": request_object["additionalInfo"]
@@ -53,23 +51,34 @@ def get_avia_routes(content: dict) -> list:
         response = future.result()
         callback = request_objects[future]["callback"]
         additional_info = request_objects[future]["additionalInfo"]
-        routes.extend(callback(response, count, **additional_info))
-
-    return [route.to_json() for route in sorted(routes)]
+        routes.extend(callback(response, **additional_info))
+    sorted_routes = sorted(routes)
+    result_routes = []
+    for route in sorted_routes:
+        if route not in result_routes:
+            result_routes.append(route)
+    jsoned_routes = [route.to_json() for route in result_routes]
+    if 0 <= count < len(result_routes):
+        return jsoned_routes[0: count]
+    else:
+        return jsoned_routes
 
 
 def get_avia_trips(content: dict) -> list:
-    count = content["count"]
-    content_to = content
-    content_back = copy.deepcopy(content)
+    count = int(content["count"])
+    content_to = __copy_dict(content)
+    content_back = __copy_dict(content)
+    for key in content.keys():
+        content_to[key] = content.get(key)
+        content_back[key] = content.get(key)
     __fill_contents(content_to, content_back, content)
 
     request_objects = {}
     for avia_service in get_all_services():
         request_object_to = avia_service.get_request_object(content_to)
         request_object_back = avia_service.get_request_object(content_back)
-        future_to = FuturesSession(max_workers=10).post(**request_object_to["request"])
-        future_back = FuturesSession(max_workers=10).post(**request_object_back["request"])
+        future_to = __get_future(request_object_to)
+        future_back = __get_future(request_object_back)
         request_objects[future_to] = {
             "where": "to",
             "callback": request_object_to["callback"],
@@ -87,14 +96,18 @@ def get_avia_trips(content: dict) -> list:
         response = future.result()
         callback = request_objects[future]["callback"]
         additional_info = request_objects[future]["additionalInfo"]
-        routes = callback(response, count, **additional_info)
+        routes = callback(response, **additional_info)
         if request_objects[future]["where"] == "to":
             routes_to.extend(routes)
         else:
             routes_back.extend(routes)
     routes_to_sorted = sorted(routes_to, key=lambda _route: _route.get_cheapest_place())
     routes_back_sorted = sorted(routes_back, key=lambda _route: _route.get_cheapest_place())
-    return __make_trips(routes_to_sorted, routes_back_sorted)
+    jsoned_trips = __make_trips(routes_to_sorted, routes_back_sorted)
+    if 0 <= count < len(jsoned_trips):
+        return jsoned_trips[0: count]
+    else:
+        return jsoned_trips
 
 
 def __make_trips(routes_to: list, routes_back: list):
@@ -107,6 +120,20 @@ def __make_trips(routes_to: list, routes_back: list):
         }
         result.append(trip)
     return result
+
+
+def __copy_dict(base_dict: dict) -> dict:
+    new_dict = {}
+    for key in base_dict.keys():
+        new_dict[key] = new_dict.get(key)
+    return new_dict
+
+
+def __get_future(request_object: dict) -> FuturesSession:
+    if request_object["method"] == "GET":
+        return FuturesSession().get(**request_object["request"])
+    elif request_object["method"] == "POST":
+        return FuturesSession().post(**request_object["request"])
 
 
 def __fill_contents(content_to: dict, content_back: dict, content: dict):

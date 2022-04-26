@@ -15,9 +15,9 @@ def get_request_to_kupibilet(departure_code: str, arrival_code: str,
     api_endpoint = "https://flights-api-shopping-target-site.kupibilet.ru/v4/search/new"
     payload = json.dumps({
         "passengers": {
-            "adult": adult,
-            "child": child,
-            "infant": infant
+            "adult": int(adult),
+            "child": int(child),
+            "infant": int(infant)
         },
         "parts": [
             {
@@ -48,14 +48,12 @@ def get_request_to_kupibilet(departure_code: str, arrival_code: str,
     return request
 
 
-def get_routes_from_kupibilet(response: Response, count: int):
+def get_routes_from_kupibilet(response: Response):
     data = response.json()
     if data["status"] == "fail":
         raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
-    routes = __get_routes(data, count)
-    if len(routes) == 0:
-        raise NoSuchRoutesException
-    return routes
+    routes = __get_routes(data)
+    return sorted(routes)
 
 
 def __make_url(data: dict) -> str:
@@ -95,8 +93,9 @@ def __get_min_price(index: int, tickets: list) -> int:
     return -1
 
 
-def __get_routes(data: dict, count: int) -> list:
+def __get_routes(data: dict) -> list:
     _routes = []
+    url = __make_url(data)
     for _route in data["timetable"][0]:
         segments = []
         for _segment in _route["segments"]:
@@ -110,16 +109,15 @@ def __get_routes(data: dict, count: int) -> list:
         duration_in_minutes = 0
         for segment in segments:
             duration_in_minutes += segment.duration_in_minutes
-        url = __make_url(data)
         index = _route["raw"]["index"]
         min_price = __get_min_price(index, data["tickets"])
         if min_price != -1:
             min_price = round(min_price / 100)
-            places = [Place("Минимальный", None, min_price, min_price)]
+            places = [Place("Минимальный", min_price, min_price)]
             avia_route = AviaRoute(departure, departure_code, arrival, arrival_code,
                                    departure_datetime, arrival_datetime, duration_in_minutes,
-                                   segments, url, "https://www.kupibilet.ru/")
+                                   segments, places, url, "https://www.kupibilet.ru/")
             avia_route.places = places
             _routes.append(avia_route)
+    return sorted(_routes)
 
-    return sorted(_routes)[0:count]

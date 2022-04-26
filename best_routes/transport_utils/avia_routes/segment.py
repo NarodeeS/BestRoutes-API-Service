@@ -23,8 +23,8 @@ class Segment(BaseRoute):
             "departureCode": self.departure_code,
             "arrival": self.arrival,
             "arrivalCode": self.arrival_code,
-            "departureDateTime": self.departure_datetime,
-            "arrivalDateTime": self.arrival_datetime,
+            "departureDateTime": self.departure_datetime.isoformat(),
+            "arrivalDateTime": self.arrival_datetime.isoformat(),
             "duration": self.duration_in_minutes,
             "airline": self.airline,
             "plane": self.plane

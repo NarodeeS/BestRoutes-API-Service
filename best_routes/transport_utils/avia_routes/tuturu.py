@@ -18,9 +18,9 @@ def get_request_to_tuturu(departure_code: str, arrival_code: str,
     arrival_city_id = get_city_id(arrival_code, "to")
     payload = json.dumps({
         "passengers": {
-            "child": child,
-            "infant": infant,
-            "full": adult
+            "child": int(child),
+            "infant": int(infant),
+            "full": int(adult)
         },
         "serviceClass": service_class,
         "routes": [
@@ -46,14 +46,12 @@ def get_request_to_tuturu(departure_code: str, arrival_code: str,
     return request
 
 
-def get_routes_from_tuturu(response: Response, count: int, **additional_info: dict) -> list:
+def get_routes_from_tuturu(response: Response, **additional_info: dict) -> list:
     data = response.json()
     data[0]["departure_id"] = additional_info["departureId"]
     data[0]["arrival_id"] = additional_info["arrivalId"]
-    routes = __get_routes(data, count)
-    if len(routes) == 0:
-        raise NoSuchRoutesException
-    return sorted(routes, key=lambda _route: _route.get_cheapest_place())
+    routes = __get_routes(data)
+    return sorted(routes)
 
 
 def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
@@ -63,7 +61,7 @@ def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: dat
                           f"{departure_city_id}-{formatted_date}-{arrival_city_id}&changes=all"
 
 
-def __get_min_place(places_id: str, fare_applications: dict,
+def __get_places(places_id: str, fare_applications: dict,
                     conditions: dict, offers: dict) -> list:
 
     actual_offers = offers["actual"][places_id]["offerVariants"]
@@ -78,7 +76,7 @@ def __get_min_place(places_id: str, fare_applications: dict,
             fare_application = fare_applications[fare_id[0]]
             condition_id = fare_application["segmentConditions"]
             name = conditions[condition_id]["fareFamily"]["value"]
-        places.append(Place(name, None, price_exact, price_exact))
+        places.append(Place(name, price_exact, price_exact))
 
     return places
 
@@ -109,13 +107,16 @@ def __get_segments(_route: dict, _segments: dict, points: dict,
         segment_departure_airport = points[str(_segment["departureGeoPointId"])]
         segment_departure_airport_name = segment_departure_airport["name"]["nominative"]
         segment_departure_city = cities[str(segment_departure_airport["cityId"])]["name"]["nominative"]
-        segment_departure_datetime = datetime.fromisoformat(_segment["departureDateTime"])
+        segment_departure_datetime = _get_datetime_without_tz(_segment["departureDateTime"])
+        segment_departure_datetime = datetime.fromisoformat(segment_departure_datetime)
         segment_departure = f"{segment_departure_airport_name} ({segment_departure_city})"
 
         segment_arrival_airport = points[str(_segment["arrivalGeoPointId"])]
         segment_arrival_airport_name = segment_arrival_airport["name"]["nominative"]
         segment_arrival_city = cities[str(segment_arrival_airport["cityId"])]["name"]["nominative"]
-        segment_arrival_datetime = datetime.fromisoformat(_segment["arrivalDateTime"])
+        segment_arrival_datetime = _get_datetime_without_tz(_segment["arrivalDateTime"])
+        segment_arrival_datetime = datetime.fromisoformat(segment_arrival_datetime)
+
         segment_arrival = f"{segment_arrival_airport_name} ({segment_arrival_city})"
 
         segment_duration_in_minutes = _segment["duration"]
@@ -127,7 +128,7 @@ def __get_segments(_route: dict, _segments: dict, points: dict,
     return segments
 
 
-def __get_routes(data: list, count: int) -> list:
+def __get_routes(data: list) -> list:
     dictionary = data[0]["dictionary"]
     points = dictionary["avia"]["points"]
     common = dictionary["common"]
@@ -151,11 +152,20 @@ def __get_routes(data: list, count: int) -> list:
             duration_in_minutes += segment.duration_in_minutes
         url = __make_url(data[0]["departure_id"], data[0]["arrival_id"], departure_datetime.date())
         source = "https://www.tutu.ru/"
+        places = __get_places(segments_id, common["fareApplications"],
+                              dictionary["avia"]["conditions"], data[0]["offers"])
         _route = AviaRoute(departure, None, arrival, None, departure_datetime,
-                           arrival_datetime, duration_in_minutes, route_segments, url, source)
-        _route.places = __get_min_place(segments_id, common["fareApplications"],
-                                        dictionary["avia"]["conditions"], data[0]["offers"])
+                           arrival_datetime, duration_in_minutes, route_segments, places, url, source)
         result_routes.append(_route)
 
-    return sorted(result_routes)[0:count]
+    return sorted(result_routes)
+
+
+def _get_datetime_without_tz(datetime_string: str) -> str:
+    date_string = datetime_string[0:10]
+    time_string = datetime_string[11:]
+    tz_pos = (time_string.find('-') + 1 or time_string.find('+') + 1)
+    result_time = time_string[:tz_pos-1] if tz_pos > 0 else time_string
+    return date_string+"T"+result_time
+
 

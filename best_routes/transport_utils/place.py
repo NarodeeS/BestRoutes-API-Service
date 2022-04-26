@@ -1,16 +1,13 @@
 class Place:
-    def __init__(self, name: str, count: int,
-                 min_price: float, max_price: float) -> None:
+    def __init__(self, name: str, min_price: float, max_price: float) -> None:
 
         self.name = name
-        self.count = count
         self.min_price = min_price
         self.max_price = max_price
 
     def to_json(self) -> dict:
         return {
             "name": self.name,
-            "count": self.count,
             "minPrice": self.min_price,
             "maxPrice": self.max_price
         }

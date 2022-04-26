@@ -1,11 +1,9 @@
 import flask
 from best_routes import app
 from flask import request, make_response, jsonify, render_template, url_for, redirect, session
-from datetime import datetime, date
+from datetime import date
 from best_routes.database_interaction import *
-from best_routes.transport_utils.avia_routes import get_avia_routes_from_service, get_avia_routes, \
-    get_avia_trips_from_service, get_avia_trips, AviaService
-from best_routes.transport_utils.railway_routes import get_routes_from_rzd, get_routes_from_rzd_return
+from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
 from werkzeug.security import generate_password_hash, check_password_hash
 from best_routes.middleware import auth, exception_handler
 import os
@@ -15,80 +13,14 @@ import os
 @exception_handler
 @auth
 def routes_avia():
-    return make_response(jsonify(result=get_avia_routes(request.get_json()), status="OK"), 200)
+    return make_response(jsonify(result=get_avia_routes(request.args), status="OK"), 200)
 
 
 @app.route("/routes/avia/trips", methods=["GET", "POST"])
 @exception_handler
 @auth
 def routes_avia_trip():
-    return make_response(jsonify(result=get_avia_trips(request.get_json()), status="OK"), 200)
-
-
-@app.route("/routes/avia/tutu", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_avia_tutu():
-    return make_response(jsonify(result=get_avia_routes_from_service(AviaService.TUTU, request.get_json()),
-                                 status="OK"), 200)
-
-
-@app.route("/routes/avia/trips/tutu", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_avia_tutu_trip():
-    return make_response(jsonify(result=get_avia_trips_from_service(AviaService.TUTU, request.get_json()),
-                                 status="OK"), 200)
-
-
-@app.route("/routes/avia/kupibilet", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_avia_kupibilet():
-    return make_response(jsonify(result=get_avia_routes_from_service(AviaService.KUPIBILET, request.get_json()),
-                                 status="OK"), 200)
-
-
-@app.route("/routes/avia/trips/kupibilet", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_avia_kupibilet_trip():
-    return make_response(jsonify(result=get_avia_trips_from_service(AviaService.KUPIBILET, request.get_json()),
-                                 status="OK"), 200)
-
-
-@app.route("/routes/railway/rzd", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_railway_rzd():
-    content = request.get_json()
-    from_station_code = content["fromStationCode"]  # Express 3 format
-    from_station_node_id = content["fromStationNodeId"]  # from RZD suggests API
-    to_station_code = content["toStationCode"]
-    to_station_node_id = content["toStationNodeId"]
-    departure_datetime = datetime.fromisoformat(content["departureDatetime"])
-    count = content["count"]
-    result = get_routes_from_rzd(from_station_code, from_station_node_id,
-                                 to_station_code, to_station_node_id,
-                                 departure_datetime, count)
-    return make_response(jsonify(result=result, status="OK"), 200)
-
-
-@app.route("/routes/railway/trips/rzd", methods=["GET", "POST"])
-@exception_handler
-@auth
-def routes_railway_rzd_trip():
-    content = request.get_json()
-    from_station_code = content["fromStationCode"]
-    from_station_node_id = content["fromStationNodeId"]
-    to_station_code = content["toStationCode"]
-    to_station_node_id = content["toStationNodeId"]
-    departure_datetime1 = datetime.fromisoformat(content["departureDatetime1"])
-    departure_datetime2 = datetime.fromisoformat(content["departureDatetime2"])
-    count = content["count"]
-    result = get_routes_from_rzd_return(from_station_code, from_station_node_id, to_station_code,
-                                        to_station_node_id, departure_datetime1, departure_datetime2, count)
-    return make_response(jsonify(result=result, status="OK"), 200)
+    return make_response(jsonify(result=get_avia_trips(request.args), status="OK"), 200)
 
 
 @app.route("/user/login", methods=["POST"])
@@ -102,8 +34,6 @@ def user_login():
     supposed_user = get_user_by_email(email)
     if supposed_user is not None:
         if check_password_hash(supposed_user.password, password):
-            if content.get("telegramId") is not None:
-                update_user_telegram_id(supposed_user.id, content.get("telegramId"))
             user_token = add_token(supposed_user.id)
             response = make_response(jsonify(status="OK", token=user_token.value), 200)
             return response
@@ -125,10 +55,7 @@ def user_register():
         os.environ.get("HASH_METHOD"),
         int(os.environ.get("SALT_ROUNDS"))
     )
-    telegram_id = None
-    if content.get("telegramId") is not None:
-        telegram_id = content["telegramId"]
-    new_user = add_user(email, hashed_password, telegram_id, False)
+    new_user = add_user(email, hashed_password, False)
     new_user_token = add_token(new_user.id)
     response = make_response(jsonify(status="OK", token=new_user_token.value), 200)
     return response
@@ -252,7 +179,7 @@ def developer_auth():
                 os.environ.get("HASH_METHOD"),
                 int(os.environ.get("SALT_ROUNDS"))
             )
-            user = add_user(email, hashed_password, None, True)
+            user = add_user(email, hashed_password, True)
 
         session["user_id"] = user.id
         return redirect(url_for("developer_home"))

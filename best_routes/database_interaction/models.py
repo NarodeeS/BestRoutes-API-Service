@@ -8,7 +8,6 @@ class User(Base):
     id = Column(Integer, unique=True, primary_key=True, nullable=False, autoincrement=True)
     email = Column(String(255), nullable=False, unique=True)
     password = Column(String(255), nullable=False)
-    telegram_id = Column(String(255), default=None)
     is_developer = Column(Boolean, nullable=False)
     tokens = relationship("Token", cascade="all")
     tracked_avia_directions = relationship("TrackedAviaDirection", cascade="all")
