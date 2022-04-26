@@ -1,5 +1,5 @@
 from datetime import datetime
-from transport_utils import BaseRoute
+from best_routes.transport_utils import BaseRoute
 
 
 class Segment(BaseRoute):
@@ -17,11 +17,16 @@ class Segment(BaseRoute):
         self.airline = airline
         self.plane = plane
 
-    def __str__(self) -> str:
-        return f"Departure: {self.departure}; " \
-               f"Arrival: {self.arrival}; " \
-               f"Departure date: {self.departure_datetime}; " \
-               f"Arrival date: {self.arrival_datetime}; " \
-               f"Duration: {self.duration_in_minutes} minutes; " \
-               f"Airline: {self.airline}' " \
-               f"Plane: {self.plane}"
+    def to_json(self) -> dict:
+        return {
+            "departure": self.departure,
+            "departureCode": self.departure_code,
+            "arrival": self.arrival,
+            "arrivalCode": self.arrival_code,
+            "departureDateTime": self.departure_datetime.isoformat(),
+            "arrivalDateTime": self.arrival_datetime.isoformat(),
+            "duration": self.duration_in_minutes,
+            "airline": self.airline,
+            "plane": self.plane
+        }
+
