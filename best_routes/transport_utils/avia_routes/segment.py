@@ -3,8 +3,6 @@ from best_routes.transport_utils import BaseRoute
 
 
 class Segment(BaseRoute):
-    """Describe a part of an air travel, that is.
-    It is necessary if a transfer occurs during the flight """
     def __init__(self, departure: str, departure_code: str, arrival: str,
                  arrival_code: str, departure_datetime: datetime,
                  arrival_datetime: datetime, duration_in_minutes: int,

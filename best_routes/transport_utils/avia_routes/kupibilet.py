@@ -1,13 +1,14 @@
 import json
 from datetime import date, datetime
 from requests import Response
+from requests.exceptions import JSONDecodeError
 from .segment import Segment
-from best_routes.exceptions import ServiceNotRespondException, NoSuchRoutesException
+from best_routes.utils import logger
+from best_routes.utils import Log
 from .avia_route import AviaRoute
 from best_routes.transport_utils import Place
 
 
-#  service_class = Y or C. Y - эконом. C - бизнес
 def get_request_to_kupibilet(departure_code: str, arrival_code: str,
                              departure_date: date, adult: int, child: int,
                              infant: int,  service_class: str) -> dict:
@@ -48,22 +49,26 @@ def get_request_to_kupibilet(departure_code: str, arrival_code: str,
     return request
 
 
-def get_routes_from_kupibilet(response: Response):
-    data = response.json()
-    if data["status"] == "fail":
-        raise ServiceNotRespondException("Kupibilet.ru", data["error"])  # emptyResult - нет билетов по данному запросу
-    routes = __get_routes(data)
-    return sorted(routes)
+def get_routes_from_kupibilet(response: Response) -> list:
+    try:
+        data = response.json()
+        if data["status"] == "fail":
+            return []
+        routes = _get_routes(data)
+        return sorted(routes)
+    except JSONDecodeError:
+        logger.add_log(Log("JSONDecodeError", "-", "get_routes_from_kupibilet", "kupibilet.py"))
+        return []
 
 
-def __make_url(data: dict) -> str:
+def _make_url(data: dict) -> str:
     site_endpoint = "https://www.kupibilet.ru/search/"
     part1 = data["search"]["cache_key"].split(":")[0]
     part2 = data["urn"].split(":")[1]
     return site_endpoint + part1 + "/" + part2
 
 
-def __get_segment(_segment: dict, codes: dict) -> Segment:
+def _get_segment(_segment: dict, codes: dict) -> Segment:
     segment_flight_time = _segment["flight_time"]
     segment_departure_code = _segment["departure_airport"]
     segment_arrival_code = _segment["arrival_airport"]
@@ -86,20 +91,20 @@ def __get_segment(_segment: dict, codes: dict) -> Segment:
                    segment_flight_time, airline, plane)
 
 
-def __get_min_price(index: int, tickets: list) -> int:
+def _get_min_price(index: int, tickets: list) -> int:
     for ticket in tickets:
         if ticket["trip_id"] == index:
             return ticket["min_price"]
     return -1
 
 
-def __get_routes(data: dict) -> list:
+def _get_routes(data: dict) -> list:
     _routes = []
-    url = __make_url(data)
+    url = _make_url(data)
     for _route in data["timetable"][0]:
         segments = []
         for _segment in _route["segments"]:
-            segments.append(__get_segment(_segment, data["codes"]))
+            segments.append(_get_segment(_segment, data["codes"]))
         departure = segments[0].departure
         arrival = segments[len(segments)-1].arrival
         departure_code = segments[0].departure_code
@@ -110,7 +115,7 @@ def __get_routes(data: dict) -> list:
         for segment in segments:
             duration_in_minutes += segment.duration_in_minutes
         index = _route["raw"]["index"]
-        min_price = __get_min_price(index, data["tickets"])
+        min_price = _get_min_price(index, data["tickets"])
         if min_price != -1:
             min_price = round(min_price / 100)
             places = [Place("Минимальный", min_price, min_price)]
@@ -120,4 +125,3 @@ def __get_routes(data: dict) -> list:
             avia_route.places = places
             _routes.append(avia_route)
     return sorted(_routes)
-

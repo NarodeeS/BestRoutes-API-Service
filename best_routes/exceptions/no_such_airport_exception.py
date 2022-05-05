@@ -4,4 +4,4 @@ class NoSuchAirportException(Exception):
 
     def __str__(self) -> str:
         return f"Can't find airport presented in the request. " \
-               f"Airport code: {self.airport_code}\n"
+               f"Airport code: {self.airport_code}"

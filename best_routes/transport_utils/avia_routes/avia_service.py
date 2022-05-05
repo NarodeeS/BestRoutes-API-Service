@@ -1,9 +1,12 @@
 from enum import Enum
 from datetime import date
-from .tuturu import get_request_to_tuturu, get_city_id, get_routes_from_tuturu
+from .tuturu import get_request_to_tuturu, get_routes_from_tuturu
 from .kupibilet import get_request_to_kupibilet, get_routes_from_kupibilet
 from .onetwotrip import get_request_to_onetwotrip, get_routes_from_onetwotrip
-from best_routes.exceptions import NoSuchRoutesException
+from best_routes.utils import logger
+from best_routes.utils import Log
+from best_routes.exceptions import NoSuchRoutesException, NoSuchAirportException
+from best_routes.database_interaction import get_city_id
 
 
 def get_all_services() -> list:
@@ -34,8 +37,14 @@ class AviaService(Enum):
 
     def get_request_object(self, content: dict) -> dict:
         if self.name == AviaService.TUTU.name:
-            departure_city_id = get_city_id(content["departureCode"], "from")
-            arrival_city_id = get_city_id(content["arrivalCode"], "to")
+            departure_city_id = None
+            arrival_city_id = None
+            try:
+                departure_city_id = get_city_id(content["departureCode"], "from")
+                arrival_city_id = get_city_id(content["arrivalCode"], "to")
+            except NoSuchAirportException as e:
+                logger.add_log(Log("NoSuchAirportException", f"Code: {e.airport_code}",
+                                   "get_request_object", "avia_service.py"))
             return {
                 "request": get_request_to_tuturu(**prepare_content_routes(content)),
                 "callback": get_routes_from_tuturu,
@@ -45,6 +54,7 @@ class AviaService(Enum):
                 },
                 "method": "GET"
             }
+
         elif self.name == AviaService.KUPIBILET.name:
             return {
                 "request": get_request_to_kupibilet(**prepare_content_routes(content)),
@@ -59,4 +69,3 @@ class AviaService(Enum):
                 "additionalInfo": {},
                 "method": "GET"
             }
-

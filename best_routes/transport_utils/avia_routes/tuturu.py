@@ -1,14 +1,15 @@
 import json
-import requests
 from datetime import date, datetime
-from .segment import Segment
-from best_routes.exceptions import NoSuchAirportException, NoSuchRoutesException
-from .avia_route import AviaRoute
-from best_routes.transport_utils import Place
 from requests import Response
+from requests.exceptions import JSONDecodeError
+from .segment import Segment
+from best_routes.database_interaction import get_city_id
+from .avia_route import AviaRoute
+from best_routes.utils import logger
+from best_routes.utils import Log
+from best_routes.transport_utils import Place
 
 
-#  service_class = Y or C. Y - эконом. C - бизнес
 def get_request_to_tuturu(departure_code: str, arrival_code: str,
                           departure_date: date, adult: int, child: int,
                           infant: int, service_class: str) -> dict:
@@ -16,6 +17,7 @@ def get_request_to_tuturu(departure_code: str, arrival_code: str,
     api_endpoint = "https://offers-api.tutu.ru/avia/offers"
     departure_city_id = get_city_id(departure_code, "from")
     arrival_city_id = get_city_id(arrival_code, "to")
+
     payload = json.dumps({
         "passengers": {
             "child": int(child),
@@ -47,58 +49,19 @@ def get_request_to_tuturu(departure_code: str, arrival_code: str,
 
 
 def get_routes_from_tuturu(response: Response, **additional_info: dict) -> list:
-    data = response.json()
-    data[0]["departure_id"] = additional_info["departureId"]
-    data[0]["arrival_id"] = additional_info["arrivalId"]
-    routes = __get_routes(data)
-    return sorted(routes)
+    try:
+        data = response.json()
+        data[0]["departure_id"] = additional_info["departureId"]
+        data[0]["arrival_id"] = additional_info["arrivalId"]
+        routes = _get_routes(data)
+        return sorted(routes)
+    except JSONDecodeError:
+        logger.add_log(Log("JSONDecodeError", "-", "get_routes_from_tuturu", "tuturu.py"))
+        return []
 
 
-def __make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
-    url_endpoint = "https://avia.tutu.ru/offers/?"
-    formatted_date = "".join(reversed(str(departure_date).split("-")))
-    return url_endpoint + f"class=Y&passengers=100&route[0]=" \
-                          f"{departure_city_id}-{formatted_date}-{arrival_city_id}&changes=all"
-
-
-def __get_places(places_id: str, fare_applications: dict,
-                    conditions: dict, offers: dict) -> list:
-
-    actual_offers = offers["actual"][places_id]["offerVariants"]
-    places = []
-    for offer in actual_offers:
-        price = offer["price"]["value"]["amount"]
-        fraction = offer["price"]["value"]["fraction"]
-        price_exact = round(price / fraction)
-        fares = offer["fareApplications"]
-        name = ""
-        for fare_id in fares.values():
-            fare_application = fare_applications[fare_id[0]]
-            condition_id = fare_application["segmentConditions"]
-            name = conditions[condition_id]["fareFamily"]["value"]
-        places.append(Place(name, price_exact, price_exact))
-
-    return places
-
-
-def get_city_id(code: str, direction: str) -> int:
-    api_endpoint = "https://avia.tutu.ru/suggest/city/v5/"
-    params = {
-        "name": code,
-        "direction": direction
-    }
-    response = requests.get(url=api_endpoint, params=params)
-    data = response.json()
-    if isinstance(data, list):
-        for offer in data:
-            if offer["code"] == code:
-                return int(offer["id"])
-
-        raise NoSuchAirportException(code)
-
-
-def __get_segments(_route: dict, _segments: dict, points: dict,
-                   cities: dict, carriers: dict) -> list:
+def _get_segments(_route: dict, _segments: dict, points: dict,
+                  cities: dict, carriers: dict) -> list:
 
     segments = []
     for _segment_id in _route["segmentIds"]:
@@ -128,7 +91,7 @@ def __get_segments(_route: dict, _segments: dict, points: dict,
     return segments
 
 
-def __get_routes(data: list) -> list:
+def _get_routes(data: list) -> list:
     dictionary = data[0]["dictionary"]
     points = dictionary["avia"]["points"]
     common = dictionary["common"]
@@ -137,8 +100,8 @@ def __get_routes(data: list) -> list:
     _routes = common["routes"]
     result_routes = []
     for _route_key in _routes.keys():
-        route_segments = __get_segments(_routes[_route_key], common["segments"],
-                                        points, cities, carriers)
+        route_segments = _get_segments(_routes[_route_key], common["segments"],
+                                       points, cities, carriers)
         departure = route_segments[0].departure
         departure_datetime = route_segments[0].departure_datetime
         arrival = route_segments[len(route_segments) - 1].arrival
@@ -150,10 +113,10 @@ def __get_routes(data: list) -> list:
         segments_id = segments_id[0: len(segments_id)-1]
         for segment in route_segments:
             duration_in_minutes += segment.duration_in_minutes
-        url = __make_url(data[0]["departure_id"], data[0]["arrival_id"], departure_datetime.date())
+        url = _make_url(data[0]["departure_id"], data[0]["arrival_id"], departure_datetime.date())
         source = "https://www.tutu.ru/"
-        places = __get_places(segments_id, common["fareApplications"],
-                              dictionary["avia"]["conditions"], data[0]["offers"])
+        places = _get_places(segments_id, common["fareApplications"],
+                             dictionary["avia"]["conditions"], data[0]["offers"])
         _route = AviaRoute(departure, None, arrival, None, departure_datetime,
                            arrival_datetime, duration_in_minutes, route_segments, places, url, source)
         result_routes.append(_route)
@@ -169,3 +132,30 @@ def _get_datetime_without_tz(datetime_string: str) -> str:
     return date_string+"T"+result_time
 
 
+def _make_url(departure_city_id: int, arrival_city_id: int, departure_date: date) -> str:
+    url_endpoint = "https://avia.tutu.ru/offers/?"
+    formatted_date = "".join(reversed(str(departure_date).split("-")))
+    return url_endpoint + f"class=Y&passengers=100&route[0]=" \
+                          f"{departure_city_id}-{formatted_date}-{arrival_city_id}&changes=all"
+
+
+def _get_places(places_id: str, fare_applications: dict,
+                conditions: dict, offers: dict) -> list:
+
+    actual_offers = offers["actual"][places_id]["offerVariants"]
+    places = []
+    for offer in actual_offers:
+        price = offer["price"]["value"]["amount"]
+        fraction = offer["price"]["value"]["fraction"]
+        price_exact = round(price / fraction)
+        fares = offer["fareApplications"]
+        name = ""
+        for fare_id in fares.values():
+            fare_application = fare_applications[fare_id[0]]
+            condition_id = fare_application["segmentConditions"]
+            if  conditions[condition_id]["fareFamily"] is None:
+                continue
+            name = conditions[condition_id]["fareFamily"]["value"]
+        places.append(Place(name, price_exact, price_exact))
+
+    return places

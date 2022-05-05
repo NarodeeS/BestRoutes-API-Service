@@ -1,4 +1,4 @@
-from best_routes.database_interaction.models import User
+from .models import User
 from best_routes.exceptions import UserAlreadyExistsException
 from .database import db_session
 

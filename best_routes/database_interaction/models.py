@@ -47,7 +47,7 @@ class TrackedAviaDirection(Base):
             "count": -1
         }
 
-    def to_json(self):
+    def to_json(self) -> dict:
         base = self.to_request_form()
         base.pop("count")
         base["id"] = self.id
@@ -63,8 +63,8 @@ class TrackedAviaTrip(Base):
     back_direction_id = Column(Integer, ForeignKey("tracked_avia_direction.id"), nullable=False)
     trip_min_cost = Column(Integer, nullable=False)
 
-    direction_to = relationship("TrackedAviaDirection", foreign_keys=[to_direction_id])
-    direction_back = relationship("TrackedAviaDirection", foreign_keys=[back_direction_id])
+    direction_to = relationship("TrackedAviaDirection", foreign_keys=[to_direction_id], cascade="all,delete")
+    direction_back = relationship("TrackedAviaDirection", foreign_keys=[back_direction_id], cascade="all,delete")
 
     def to_request_form(self) -> dict:
         return {

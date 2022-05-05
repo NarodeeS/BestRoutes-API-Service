@@ -19,6 +19,6 @@ class Place:
             return False
         return False
 
-    def __add__(self, other):
+    def __add__(self, other) -> float:
         if isinstance(other, Place):
             return self.min_price + other.min_price

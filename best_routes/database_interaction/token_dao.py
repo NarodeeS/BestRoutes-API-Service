@@ -1,6 +1,6 @@
 import random
 import string
-from best_routes.database_interaction.models import Token
+from .models import Token
 from .database import db_session
 
 

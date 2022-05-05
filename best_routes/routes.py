@@ -1,12 +1,10 @@
-import flask
-from best_routes import app
-from flask import request, make_response, jsonify, render_template, url_for, redirect, session
-from datetime import date
-from best_routes.database_interaction import *
-from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
+import os
+from flask import redirect, session, url_for, render_template
 from werkzeug.security import generate_password_hash, check_password_hash
 from best_routes.middleware import auth, exception_handler
-import os
+from best_routes.database_interaction import *
+from best_routes.transport_utils.avia_routes import get_avia_routes, get_avia_trips
+from best_routes import app
 
 
 @app.route("/routes/avia", methods=["GET", "POST"])
@@ -21,25 +19,6 @@ def routes_avia():
 @auth
 def routes_avia_trip():
     return make_response(jsonify(result=get_avia_trips(request.args), status="OK"), 200)
-
-
-@app.route("/user/login", methods=["POST"])
-@exception_handler
-def user_login():
-    content = request.get_json()
-    email = content["email"]
-    password = content["password"]
-    if email is None or password is None:
-        raise ValueError
-    supposed_user = get_user_by_email(email)
-    if supposed_user is not None:
-        if check_password_hash(supposed_user.password, password):
-            user_token = add_token(supposed_user.id)
-            response = make_response(jsonify(status="OK", token=user_token.value), 200)
-            return response
-        return make_response(jsonify(status="error", message="Wrong credentials"), 403)
-    else:
-        return make_response(jsonify(status="error", message="No such user"), 401)
 
 
 @app.route("/user/register", methods=["POST"])
@@ -61,12 +40,31 @@ def user_register():
     return response
 
 
+@app.route("/user/login", methods=["POST"])
+@exception_handler
+def user_login():
+    content = request.get_json()
+    email = content["email"]
+    password = content["password"]
+    if email is None or password is None:
+        raise KeyError()
+    supposed_user = get_user_by_email(email)
+    if supposed_user is not None:
+        if check_password_hash(supposed_user.password, password):
+            user_token = add_token(supposed_user.id)
+            response = make_response(jsonify(status="OK", token=user_token.value), 200)
+            return response
+        return make_response(jsonify(status="error", message="Wrong credentials"), 403)
+    else:
+        return make_response(jsonify(status="error", message="No such user"), 401)
+
+
 @app.route("/user/quit", methods=["POST"])
 @exception_handler
 @auth
 def user_quit():
     user_token = request.headers.get("Token")
-    user_tokens = __get_current_user().tokens
+    user_tokens = get_current_user().tokens
     for token in user_tokens:
         if token.value == user_token:
             delete_token(token)
@@ -78,13 +76,11 @@ def user_quit():
 @exception_handler
 @auth
 def user_track_avia_add():
-    user_id = __get_current_user().id
+    user_id = get_current_user().id
     args = request.args
     departure_code = args["departureCode"]
     arrival_code = args["arrivalCode"]
     departure_date = date.fromisoformat(request.args["departureDate"])
-    if departure_date < date.today():
-        raise ValueError()
     service_class = args["serviceClass"]
     adult = args["adult"]
     child = args["child"]
@@ -100,17 +96,21 @@ def user_track_avia_add():
 @exception_handler
 @auth
 def user_track_avia_get_all():
-    user = __get_current_user()
+    user = get_current_user()
+    directions = []
+    for direction in user.tracked_avia_directions:
+        if not direction.in_trip:
+            directions.append(direction)
     return make_response(jsonify(status="OK",
-                                 result=[direction.to_json() for direction in user.tracked_avia_directions]))
+                                 result=[direction.to_json() for direction in directions]))
 
 
 @app.route("/user/track/avia/<int:direction_id>", methods=["GET", "DELETE"])
 @exception_handler
 @auth
 def user_track_avia(direction_id: int):
-    user = __get_current_user()
-    return __process_item(user.tracked_avia_directions, direction_id)
+    user = get_current_user()
+    return process_item(user.tracked_avia_directions, direction_id)
 
 
 @app.route("/user/track/avia/trip", methods=["POST"])
@@ -140,7 +140,7 @@ def user_track_avia_trip_add():
 @exception_handler
 @auth
 def user_track_avia_trip_get_all():
-    user = __get_current_user()
+    user = get_current_user()
     return make_response(jsonify(status="OK",
                                  result=[trip.to_json() for trip in user.tracked_avia_trips]))
 
@@ -149,8 +149,8 @@ def user_track_avia_trip_get_all():
 @exception_handler
 @auth
 def user_track_avia_trip(trip_id: int):
-    user = __get_current_user()
-    return __process_item(user.tracked_avia_trips, trip_id)
+    user = get_current_user()
+    return process_item(user.tracked_avia_trips, trip_id)
 
 
 @app.route("/developer/auth", methods=["GET", "POST"])
@@ -190,16 +190,20 @@ def developer_auth():
 @app.route("/developer/quit", methods=["POST", "GET"])
 @exception_handler
 def developer_quit():
-    flask.session.pop("user_id")
+    session.pop("user_id")
     return redirect(url_for("developer_auth"))
 
 
 @app.route("/developer/home", methods=["GET"])
 @exception_handler
 def developer_home():
-    if flask.session.get("user_id") is not None:
+    if session.get("user_id") is not None:
         user_id = session.get("user_id")
-        user_services = __get_current_user(user_id).services
+        user = get_user_by_id(user_id)
+        if user is None:
+            session.pop("user_id")
+            return redirect(url_for("developer_auth"))
+        user_services = get_user_by_id(user_id).services
         return render_template("developer_home.html", services=user_services)
     else:
         return redirect(url_for("developer_auth"))
@@ -218,7 +222,7 @@ def developer_service_add():
 @app.route("/developer/service/delete/<int:service_id>", methods=["POST", "GET"])
 @exception_handler
 def developer_service_delete(service_id: int):
-    if __check_service_belonging(flask.session.get("user_id"), service_id):
+    if check_service_belonging(session.get("user_id"), service_id):
         delete_service(service_id)
         return redirect(url_for("developer_home"))
     else:
@@ -228,39 +232,8 @@ def developer_service_delete(service_id: int):
 @app.route("/developer/service/activate/<int:service_id>", methods=["POST", "GET"])
 @exception_handler
 def developer_service_activate(service_id: int):
-    if __check_service_belonging(flask.session.get("user_id"), service_id):
+    if check_service_belonging(session.get("user_id"), service_id):
         activate_service(service_id)
         return redirect(url_for("developer_home"))
     else:
         return make_response(jsonify(status="error", message="This user does not have such service"))
-
-
-def __get_current_user(passed_user_id: int = None):
-    user = None
-    if passed_user_id is not None:
-        user = get_user_by_id(passed_user_id)
-    else:
-        user_token = request.headers.get("Token")
-        user_id = int(user_token.split(":")[0])
-        user = get_user_by_id(user_id)
-    return user
-
-
-def __check_service_belonging(user_id: int, service_id: int) -> bool:
-    if user_id is not None:
-        services = get_user_by_id(user_id).services
-        for service in services:
-            if service.id == service_id:
-                return True
-    return False
-
-
-def __process_item(collection: list, item_id: int):
-    for item in collection:
-        if item.id == item_id:
-            if request.method == "GET":
-                return make_response(jsonify(status="OK", result=item.to_json()), 200)
-            elif request.method == "DELETE":
-                delete_item(item)
-                return make_response(jsonify(status="OK", message="Deleted successfully"), 200)
-    return make_response(jsonify(status="error", message="No such item"), 404)

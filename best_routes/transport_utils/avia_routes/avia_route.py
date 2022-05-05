@@ -5,7 +5,8 @@ from best_routes.transport_utils import Route
 class AviaRoute(Route):
     def __init__(self, departure: str, departure_code: str, arrival: str,
                  arrival_code: str, departure_datetime: datetime,
-                 arrival_datetime: datetime, duration: int, segments: list, places: list, url: str, source: str) -> None:
+                 arrival_datetime: datetime, duration: int,
+                 segments: list, places: list, url: str, source: str) -> None:
 
         super().__init__(departure, arrival, departure_datetime, arrival_datetime, url)
         self.departure_code = departure_code
@@ -15,7 +16,7 @@ class AviaRoute(Route):
         self.places = places
         self.source = source
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         if isinstance(other, AviaRoute):
             if self.departure_datetime == other.departure_datetime:
                 for i in range(min(len(self.segments), len(other.segments))):

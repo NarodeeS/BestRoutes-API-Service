@@ -1,4 +1,4 @@
-from best_routes.database_interaction.models import Service
+from .models import Service
 from .database import db_session
 
 
