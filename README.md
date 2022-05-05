@@ -1,2 +1,3 @@
 # BestRoutes-API-Service
-This service provides information about railway and avia routes from various sources including RZD, Tutu.ru, Kupibilet.ru.
+Данный сервис позволяет получать наиболее актуальные авиа маршруты, составлять путешествия из этих маршрутов и отслеживать динамику их цены. Сторонним разработчикам предоставляется возможность регистрировать свои сервисы для получения актуальной информации о ценах на маршруты пользователей <br/>
+<b>Документация: https://documenter.getpostman.com/view/16173963/UyrBkH7W
