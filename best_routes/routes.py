@@ -24,6 +24,8 @@ def routes_avia_trip():
 @app.route("/user/register", methods=["POST"])
 @exception_handler
 def user_register():
+    if request.headers["Content-Type"] != "application/json":
+        raise ValueError()
     content = request.get_json()
     email = content["email"]
     password = content["password"]
@@ -43,6 +45,8 @@ def user_register():
 @app.route("/user/login", methods=["POST"])
 @exception_handler
 def user_login():
+    if request.headers["Content-Type"] != "application/json":
+        raise ValueError()
     content = request.get_json()
     email = content["email"]
     password = content["password"]

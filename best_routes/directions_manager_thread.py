@@ -44,26 +44,29 @@ def _user_task(user: User) -> list:
     for user_trip in get_trips_by_user_id(user.id):
         direction_to = user_trip.direction_to
         direction_back = user_trip.direction_back
-        routes_to = get_avia_routes(direction_to.to_request_form())
-        routes_back = get_avia_routes(direction_back.to_request_form())
+        if direction_to.departure_date >= date.today() and direction_back.departure_date >= date.today():
+            routes_to = get_avia_routes(direction_to.to_request_form())
+            routes_back = get_avia_routes(direction_back.to_request_form())
 
-        if len(routes_to) != 0 and len(routes_back) != 0:
-            if routes_to[0]["minPrice"] != direction_to.direction_min_cost:
-                update_avia_direction_cost(direction_to.id, routes_to[0]["minPrice"])
+            if len(routes_to) != 0 and len(routes_back) != 0:
+                if routes_to[0]["minPrice"] != direction_to.direction_min_cost:
+                    update_avia_direction_cost(direction_to.id, routes_to[0]["minPrice"])
 
-            if routes_back[0]["minPrice"] != direction_back.direction_min_cost:
-                update_avia_direction_cost(direction_back.id, routes_back[0]["minPrice"])
-            potential_new_cost = direction_to.direction_min_cost + direction_back.direction_min_cost
-            if potential_new_cost != user_trip.trip_min_cost:
-                content = {
-                    "type": "trip",
-                    "oldPrice": user_trip.trip_min_cost,
-                    "newPrice": potential_new_cost,
-                    "tripId": user_trip.id,
-                    "userId": user.id
-                }
-                update_avia_trip_cost(user_trip.id, potential_new_cost)
-                result.append(content)
+                if routes_back[0]["minPrice"] != direction_back.direction_min_cost:
+                    update_avia_direction_cost(direction_back.id, routes_back[0]["minPrice"])
+                potential_new_cost = direction_to.direction_min_cost + direction_back.direction_min_cost
+                if potential_new_cost != user_trip.trip_min_cost:
+                    content = {
+                        "type": "trip",
+                        "oldPrice": user_trip.trip_min_cost,
+                        "newPrice": potential_new_cost,
+                        "tripId": user_trip.id,
+                        "userId": user.id
+                    }
+                    update_avia_trip_cost(user_trip.id, potential_new_cost)
+                    result.append(content)
+        else:
+            delete_avia_trip(user_trip.id)
     return result
 
 
