@@ -1,4 +1,5 @@
 from datetime import date
+from langdetect import detect
 from .models import TrackedAviaTrip, TrackedAviaDirection
 from .util_functions import check_station_existence
 from .database import db_session
@@ -18,7 +19,7 @@ def add_avia_trip(user_id: int, departure_code: str,
         raise ValueError()
     if len(service_class) > 1:
         raise ValueError()
-    if service_class != "Y" or service_class != "C":
+    if service_class == "Y" or (service_class == "C" and detect(service_class) == "en"):
         direction_to = TrackedAviaDirection(user_id=user_id, departure_code=departure_code,
                                             arrival_code=arrival_code, departure_date=departure_date1,
                                             service_class=service_class, adult=adult, child=child, infant=infant,
