@@ -19,6 +19,9 @@ def prepare_content_routes(content: dict) -> dict:
     if departure_date < date.today():
         raise NoSuchRoutesException(message="you entered an already expired date")
 
+    if int(content["adult"]) < 0 or int(content["child"]) < 0 or int(content["infant"]) < 0:
+        raise KeyError()
+
     return {
         "departure_code": content["departureCode"],
         "arrival_code": content["arrivalCode"],

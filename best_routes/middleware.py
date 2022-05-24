@@ -24,7 +24,7 @@ def exception_handler(processing_function):
     def wrapper(*args, **kwargs):
         try:
             return processing_function(*args, **kwargs)
-        except KeyError:
+        except (KeyError, TypeError):
             return make_response(jsonify(message="incorrect request parameters", status="error"), 400)
         except ValueError:
             return make_response(jsonify(message="incorrect request values", status="error"), 400)
