@@ -4,7 +4,7 @@ from best_routes.utils import logger
 from best_routes.utils import Log
 from best_routes.database_interaction import check_login
 from best_routes.exceptions import ServiceNotRespondException, \
-    NoSuchAirportException, NoSuchRoutesException, UserAlreadyExistsException
+    NoSuchCityException, NoSuchRoutesException, UserAlreadyExistsException
 
 
 def auth(processing_function):
@@ -37,7 +37,7 @@ def exception_handler(processing_function):
                                          message=f"Something went wrong. Try again"))
         except SQLAlchemyError as e:
             logger.add_log(Log("SQLAlchemyError", e.__cause__, "middleware.py", processing_function.__name__))
-        except (NoSuchRoutesException, NoSuchAirportException, UserAlreadyExistsException) as e:
+        except (NoSuchRoutesException, NoSuchCityException, UserAlreadyExistsException) as e:
             return make_response(jsonify(status="error", message=str(e)), 400)
     wrapper.__name__ = processing_function.__name__
     return wrapper

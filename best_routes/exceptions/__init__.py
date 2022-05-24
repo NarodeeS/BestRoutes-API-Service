@@ -1,4 +1,4 @@
 from .service_not_respond_exception import ServiceNotRespondException
 from .no_such_routes_exception import NoSuchRoutesException
-from .no_such_airport_exception import NoSuchAirportException
+from .no_such_city_exception import NoSuchCityException
 from .user_already_exists_exception import UserAlreadyExistsException

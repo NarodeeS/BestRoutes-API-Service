@@ -1,7 +1,7 @@
 import requests
 from flask import request, Response, make_response, jsonify
 from .database import db_session
-from best_routes.exceptions import NoSuchAirportException
+from best_routes.exceptions import NoSuchCityException
 from .user_dao import get_user_by_id
 from .token_dao import get_tokens_by_user_id
 from .models import User
@@ -57,14 +57,14 @@ def get_city_id(code: str, direction: str) -> int:
         for offer in data:
             if offer["code"] == code:
                 return int(offer["id"])
-        raise NoSuchAirportException(code)
+        raise NoSuchCityException(code)
 
 
 def check_station_existence(station_code: str, direction: str) -> bool:
     try:
         get_city_id(station_code, direction)
         return True
-    except NoSuchAirportException:
+    except NoSuchCityException:
         return False
 
 

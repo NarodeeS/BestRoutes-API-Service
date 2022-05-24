@@ -5,7 +5,7 @@ from .kupibilet import get_request_to_kupibilet, get_routes_from_kupibilet
 from .onetwotrip import get_request_to_onetwotrip, get_routes_from_onetwotrip
 from best_routes.utils import logger
 from best_routes.utils import Log
-from best_routes.exceptions import NoSuchRoutesException, NoSuchAirportException
+from best_routes.exceptions import NoSuchRoutesException, NoSuchCityException
 from best_routes.database_interaction import get_city_id
 
 
@@ -17,7 +17,7 @@ def get_all_services() -> list:
 def prepare_content_routes(content: dict) -> dict:
     departure_date = date.fromisoformat(content["departureDate"])
     if departure_date < date.today():
-        raise NoSuchRoutesException(101, "you entered an already expired date")
+        raise NoSuchRoutesException(message="you entered an already expired date")
 
     return {
         "departure_code": content["departureCode"],
@@ -42,7 +42,7 @@ class AviaService(Enum):
             try:
                 departure_city_id = get_city_id(content["departureCode"], "from")
                 arrival_city_id = get_city_id(content["arrivalCode"], "to")
-            except NoSuchAirportException as e:
+            except NoSuchCityException as e:
                 logger.add_log(Log("NoSuchAirportException", f"Code: {e.airport_code}",
                                    "get_request_object", "avia_service.py"))
             return {

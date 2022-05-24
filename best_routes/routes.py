@@ -9,14 +9,12 @@ from best_routes import app
 
 @app.route("/routes/avia", methods=["GET", "POST"])
 @exception_handler
-@auth
 def routes_avia():
     return make_response(jsonify(result=get_avia_routes(request.args), status="OK"), 200)
 
 
 @app.route("/routes/avia/trips", methods=["GET", "POST"])
 @exception_handler
-@auth
 def routes_avia_trip():
     return make_response(jsonify(result=get_avia_trips(request.args), status="OK"), 200)
 
