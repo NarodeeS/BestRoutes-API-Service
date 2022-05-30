@@ -46,7 +46,7 @@ class AviaService(Enum):
                 departure_city_id = get_city_id(content["departureCode"], "from")
                 arrival_city_id = get_city_id(content["arrivalCode"], "to")
             except NoSuchCityException as e:
-                logger.add_log(Log("NoSuchAirportException", f"Code: {e.airport_code}",
+                logger.add_log(Log("NoSuchAirportException", f"Code: {e.city_code}",
                                    "get_request_object", "avia_service.py"))
             return {
                 "request": get_request_to_tuturu(**prepare_content_routes(content)),

@@ -70,7 +70,9 @@ def user_quit():
 def user_track_avia_add():
     user_id = get_current_user().id
     args = request.args
+    departure = args["departure"]
     departure_code = args["departureCode"]
+    arrival = args["arrival"]
     arrival_code = args["arrivalCode"]
     departure_date = date.fromisoformat(request.args["departureDate"])
     service_class = args["serviceClass"]
@@ -78,8 +80,8 @@ def user_track_avia_add():
     child = args["child"]
     infant = args["infant"]
     min_cost = args["baseMinCost"]
-    add_avia_direction(user_id, departure_code,
-                       arrival_code, departure_date, service_class,
+    add_avia_direction(user_id, departure, departure_code,
+                       arrival, arrival_code, departure_date, service_class,
                        adult, child, infant, min_cost)
     return make_response(jsonify(status="OK"), 200)
 
@@ -112,7 +114,9 @@ def user_track_avia_trip_add():
     user_token = request.headers.get("Token")
     user_id = int(user_token.split(":")[0])
     args = request.args
+    departure = args["departure"]
     departure_code = args["departureCode"]
+    arrival = args["arrival"]
     arrival_code = args["arrivalCode"]
     departure_date1 = date.fromisoformat(args["departureDate1"])
     departure_date2 = date.fromisoformat(args["departureDate2"])
@@ -122,7 +126,8 @@ def user_track_avia_trip_add():
     infant = args["infant"]
     min_cost1 = args["baseMinCost1"]
     min_cost2 = args["baseMinCost2"]
-    add_avia_trip(user_id, departure_code, arrival_code, departure_date1,
+    add_avia_trip(user_id, departure, departure_code, arrival,
+                  arrival_code, departure_date1,
                   departure_date2, service_class, adult, child,
                   infant, min_cost1, min_cost2)
     return make_response(jsonify(status="OK"), 200)

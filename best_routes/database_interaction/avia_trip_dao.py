@@ -5,7 +5,8 @@ from .util_functions import check_station_existence
 from .database import db_session
 
 
-def add_avia_trip(user_id: int, departure_code: str,
+def add_avia_trip(user_id: int, departure: str,
+                  departure_code: str, arrival: str,
                   arrival_code: str, departure_date1: date,
                   departure_date2: date, service_class: str,
                   adult: int, child: int, infant: int,
@@ -20,14 +21,18 @@ def add_avia_trip(user_id: int, departure_code: str,
     if len(service_class) > 1:
         raise ValueError()
     if service_class == "Y" or (service_class == "C" and detect(service_class) == "en"):
-        direction_to = TrackedAviaDirection(user_id=user_id, departure_code=departure_code,
+        direction_to = TrackedAviaDirection(user_id=user_id, departure=departure,
+                                            departure_code=departure_code, arrival=arrival,
                                             arrival_code=arrival_code, departure_date=departure_date1,
-                                            service_class=service_class, adult=adult, child=child, infant=infant,
+                                            service_class=service_class, adult=adult,
+                                            child=child, infant=infant,
                                             direction_min_cost=min_cost1, in_trip=True)
 
-        direction_back = TrackedAviaDirection(user_id=user_id, departure_code=arrival_code,
+        direction_back = TrackedAviaDirection(user_id=user_id, departure=arrival,
+                                              departure_code=arrival_code, arrival=departure,
                                               arrival_code=departure_code, departure_date=departure_date2,
-                                              service_class=service_class, adult=adult, child=child, infant=infant,
+                                              service_class=service_class, adult=adult,
+                                              child=child, infant=infant,
                                               direction_min_cost=min_cost2, in_trip=True)
 
         db_session.add(direction_to)

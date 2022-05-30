@@ -13,7 +13,7 @@ developer_blueprint = Blueprint("developer_blueprint", __name__)
 @exception_handler
 def developer_auth():
     if session.get("user_id") is not None:
-        return redirect(url_for("developer_home"))
+        return redirect(url_for("developer_blueprint.developer_home"))
     if request.method == "POST":
         email = request.form.get("email")
         password = request.form.get("password")
@@ -38,7 +38,7 @@ def developer_auth():
             user = add_user(email, hashed_password, True)
 
         session["user_id"] = user.id
-        return redirect(url_for("developer_home"))
+        return redirect(url_for("developer_blueprint.developer_home"))
     else:
         return render_template("developer_login.html")
 
@@ -47,7 +47,7 @@ def developer_auth():
 @exception_handler
 def developer_quit():
     session.pop("user_id")
-    return redirect(url_for("developer_auth"))
+    return redirect(url_for("developer_blueprint.developer_auth"))
 
 
 @developer_blueprint.route("/developer/home", methods=["GET"])
@@ -62,7 +62,7 @@ def developer_home():
         user_services = get_user_by_id(user_id).services
         return render_template("developer_home.html", services=user_services)
     else:
-        return redirect(url_for("developer_auth"))
+        return redirect(url_for("developer_blueprint.developer_auth"))
 
 
 @developer_blueprint.route("/developer/service", methods=["POST"])
@@ -72,7 +72,7 @@ def developer_service_add():
     service_url = request.form.get("service_url")
     developer_id = session.get("user_id")
     add_service(service_name, service_url, developer_id)
-    return redirect(url_for("developer_home"))
+    return redirect(url_for("developer_blueprint.developer_home"))
 
 
 @developer_blueprint.route("/developer/service/delete/<int:service_id>", methods=["POST", "GET"])
@@ -80,7 +80,7 @@ def developer_service_add():
 def developer_service_delete(service_id: int):
     if check_service_belonging(session.get("user_id"), service_id):
         delete_service(service_id)
-        return redirect(url_for("developer_home"))
+        return redirect(url_for("developer_blueprint.developer_home"))
     else:
         return make_response(jsonify(status="error", message="This user does not have such service"))
 
@@ -90,6 +90,6 @@ def developer_service_delete(service_id: int):
 def developer_service_activate(service_id: int):
     if check_service_belonging(session.get("user_id"), service_id):
         activate_service(service_id)
-        return redirect(url_for("developer_home"))
+        return redirect(url_for("developer_blueprint.developer_home"))
     else:
         return make_response(jsonify(status="error", message="This user does not have such service"))

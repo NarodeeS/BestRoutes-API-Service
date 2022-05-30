@@ -5,22 +5,25 @@ from .util_functions import check_station_existence
 from .database import db_session
 
 
-def add_avia_direction(user_id: int, departure_code: str,
-                       arrival_code: str, departure_date: date, service_class: str,
-                       adult: int, child: int, infant: int,
+def add_avia_direction(user_id: int, departure: str,
+                       departure_code: str, arrival: str,
+                       arrival_code: str, departure_date: date,
+                       service_class: str, adult: int,
+                       child: int, infant: int,
                        direction_min_cost: int) -> TrackedAviaDirection:
     if departure_date < date.today():
         raise ValueError()
     if not check_station_existence(departure_code, "from") \
             or not check_station_existence(arrival_code, "to"):
         raise ValueError()
-
     if len(service_class) > 1:
         raise ValueError()
     if service_class == "Y" or (service_class == "C" and detect(service_class) == "en"):
-        avia_direction = TrackedAviaDirection(user_id=user_id, departure_code=departure_code,
+        avia_direction = TrackedAviaDirection(user_id=user_id, departure=departure,
+                                              departure_code=departure_code, arrival=arrival,
                                               arrival_code=arrival_code, departure_date=departure_date,
-                                              service_class=service_class, adult=adult, child=child, infant=infant,
+                                              service_class=service_class, adult=adult,
+                                              child=child, infant=infant,
                                               direction_min_cost=direction_min_cost, in_trip=False)
         db_session.add(avia_direction)
         db_session.commit()

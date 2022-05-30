@@ -26,7 +26,9 @@ class TrackedAviaDirection(Base):
     id = Column(Integer, primary_key=True, nullable=False, autoincrement=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     departure_code = Column(String(3), nullable=False)
+    departure = Column(String(255), nullable=False)
     arrival_code = Column(String(3), nullable=False)
+    arrival = Column(String(255), nullable=False)
     departure_date = Column(Date, nullable=False)
     service_class = Column(String(1), nullable=False)
     adult = Column(Integer, nullable=False)
@@ -50,6 +52,8 @@ class TrackedAviaDirection(Base):
     def to_json(self) -> dict:
         base = self.to_request_form()
         base.pop("count")
+        base["departure"] = self.departure
+        base["arrival"] = self.arrival
         base["id"] = self.id
         base["directionMinCost"] = self.direction_min_cost
         return base
